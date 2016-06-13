@@ -17,13 +17,20 @@
     color:white;
 }
 
-.dataporten-outer{
-    width: 35%;
+#dataporten_outer{
+    width: 45%;
+    z-index: 100000;
+    background: white;
+    padding: 10px;
     margin: auto;
     position: absolute;
     top: 0px;
     left: 0;
     right: 0;
+    -webkit-transition: opacity .5s;
+    -moz-transition: opacity .5s;
+    transition: opacity .5s;
+    text-align: center;
 }
 
 .dataporten-result{

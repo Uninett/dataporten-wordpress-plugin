@@ -57,6 +57,7 @@ class Dataporten_oAuth {
 		add_filter('query_vars', array($this, 'dataporten_qvar_triggers'));
 		add_action('template_redirect', array($this, 'dataporten_qvar_handlers'));
 		add_action('admin_menu', array($this, 'dataporten_settings_page'));
+		add_action('wp_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('login_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_init', array($this, 'dataporten_activate'));
@@ -298,7 +299,7 @@ class Dataporten_oAuth {
 		$matched_user = $this->dataporten_find_match_users($oauth_identity);
 
 		
-		if ($matched_user) {
+		if ($matched_user && !is_user_logged_in()) {
 			$user_id = $matched_user->ID;
 			$user_login = $matched_user->user_login;
 			wp_set_current_user($user_id, $user_login);
@@ -352,7 +353,18 @@ class Dataporten_oAuth {
 
 	function dataporten_link_account($user_id) {
 		if ($this->oauth_identity['id'] != '') {
-			add_user_meta($user_id, 'dataporten_identity', 'dataporten|' . $this->oauth_identity['id'] . '|' . time());
+			global $wpdb;
+
+			$usermeta_table = $wpdb->usermeta;
+			$query_string   = "SELECT * FROM $usermeta_table WHERE $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.meta_value LIKE '%" . $this->oauth_identity['provider'] . "|" . $this->oauth_identity['id'] . "%'";
+			$query_result   = $wpdb->get_var($query_string);
+			if(count($query_result) <= 0){
+				add_user_meta($user_id, 'dataporten_identity', 'dataporten|' . $this->oauth_identity['id'] . '|' . time());
+			} else {
+				$_SESSION['dataporten']['result'] = "Someone has already linked that account.";
+				wp_safe_redirect(site_url());
+				die();
+			}
 		}
 	}
 

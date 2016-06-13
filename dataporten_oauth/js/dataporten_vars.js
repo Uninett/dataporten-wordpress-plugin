@@ -5,6 +5,16 @@
 				document.getElementById("loginform").style.display = "none";
 			} catch(e){}
 		}
+
+		if(document.getElementById("dataporten_outer")) {
+			setTimeout(function() {
+				var message = document.getElementById("dataporten_outer");
+				message.style.opacity = 0;
+				setTimeout(function() {
+					message.remove();
+				},500);
+			}, 5000);
+		}
 		//if(window.location.pathname.indexOf("wp-admin/options-general.php") > 0) prettyPrint();
 	});
 
