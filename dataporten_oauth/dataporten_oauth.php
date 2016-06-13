@@ -2,7 +2,7 @@
 
 /*
 Plugin Name: Dataporten-oAuth
-Plugin URI: http://github.com/uninett/app-dataporten-wordpress
+Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0. 
 Version: 0.1
 Author: UNINETT
