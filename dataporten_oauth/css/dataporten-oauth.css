@@ -1,0 +1,37 @@
+.login-page-button{
+    display: block;
+    width: 100%;
+    background-color: #1e8cbe;
+    text-align: center;
+    color: white;
+    /* text-transform: capitalize; */
+    text-decoration: none;
+    padding: 12px 0;
+    -webkit-transition:background-color .5s;
+    -moz-transition:background-color .5s;
+    transition: background-color .5s;
+}
+
+.login-page-button:hover{
+    background-color: #b3b3b3;
+    color:white;
+}
+
+.dataporten-outer{
+    width: 35%;
+    margin: auto;
+    position: absolute;
+    top: 0px;
+    left: 0;
+    right: 0;
+}
+
+.dataporten-result{
+    text-align: center;
+    background: white;
+    padding: 10px 0;
+}
+
+.dataporten-settings-input{
+    width:300px;
+}
