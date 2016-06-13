@@ -76,15 +76,13 @@ class Dataporten_oAuth_login {
 		
 		if (!$access_token || !$expires_in) {
 
-			//HANDLE MALFORMED RETURNING
+			$_SESSION["dataporten"]["result"] = "Access-token wasn't found. Please contact an admin or try again later.";
+			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
 
 		} else {
-			//$_SESSION['dataporten']['access_token'] = $access_token;
 			$this->access_token = $access_token;
 			$this->expires_in   = $expires_in;
 			$this->expires_at 	= $expires_at;
-			//$_SESSION['dataporten']['expires_in']   = $expires_in;
-			//$_SESSION['dataporten']['expires_at']   = $expires_at;
 		}
 	}
 

@@ -4,19 +4,19 @@
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0. 
-Version: 0.1
+Version: 0.2
 Author: UNINETT
 Author URI: https://uninett.no
 License: GPL2
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-define('WP_DEBUG', true);
+define('WP_DEBUG', false);
 session_start();
 
 class Dataporten_oAuth {
 
-	const PLUGIN_VERSION = "0.1";
+	const PLUGIN_VERSION = "0.2";
 
 	private static $instance;
 	private $oauth_identity;
@@ -30,17 +30,15 @@ class Dataporten_oAuth {
 	private $settings = array(
 		'dataporten_http_util' 		  		=> 'curl',
 		'dataporten_login_redirect' 		=> 'home_page',
-		'dataporten_hide_native_wp'   		=> 1,
-		'dataporten_oauth_enabled' 			=> 0,
-		'dataporten_default_role_enabled' 	=> 0,
+		'dataporten_hide_native_wp'   		=> 0,
+		'dataporten_oauth_enabled' 			=> 1,
+		'dataporten_default_role_enabled' 	=> 1,
 		'dataporten_oauth_clientid' 		=> '',
 		'dataporten_oauth_clientsecret' 	=> '',
 		'dataporten_oauth_redirect_uri' 	=> '',
 		'dataporten_oauth_clientscopes' 	=> '',
-		//'dataporten_default_role_realm'		=> '',
 		'dataporten_rolesets' 				=> array(),
 		'dataporten_http_util_verify_ssl'	=> 0,
-		//'dataporten_http_util_verify_ssl' => 1,
 
 	);
 
@@ -53,14 +51,12 @@ class Dataporten_oAuth {
 	}
 
 	function dataporten_init() {
-		//print_r("initialized");
 		$this->define_environment();
 		$plugin = plugin_basename(__FILE__);
 
 		add_filter('query_vars', array($this, 'dataporten_qvar_triggers'));
 		add_action('template_redirect', array($this, 'dataporten_qvar_handlers'));
 		add_action('admin_menu', array($this, 'dataporten_settings_page'));
-		//add_action('wp_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('login_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_init', array($this, 'dataporten_activate'));
@@ -153,7 +149,6 @@ class Dataporten_oAuth {
 		wp_enqueue_script('dataporten_vars', plugins_url('/js/dataporten_vars.js', __FILE__));
 		wp_localize_script('dataporten_vars', 'dataporten_variables', $dataporten_vars);
 		wp_enqueue_style('dataporten-stylesheet', plugin_dir_url( __FILE__ ) . '/css/dataporten-oauth.css', array());
-		//wp_enqueue_scripts('dataporten-stylesheet');
 	}
 
 	function dataporten_unlink_account() {
@@ -200,7 +195,6 @@ class Dataporten_oAuth {
 	}
 
 	function dataporten_activate() {
-		//print_r("activated");
 		$this->define_environment();
 
 		foreach ($this->settings as $setting_name => $default_value) {
@@ -241,8 +235,6 @@ class Dataporten_oAuth {
 	}
 
 	function dataporten_deactivate() {
-		//print_r("deactivated");
-		//$this->define_environment;
 	}
 
 	function dataporten_settings_page() {
@@ -301,8 +293,6 @@ class Dataporten_oAuth {
 	}
 
 	function dataporten_login_user($oauth_identity) {
-		//$_SESSION['dataporten']['user_id'] = $oauth_identity['id'];
-		//$_SESSION['dataporten']['email']   = $oauth_identity['email'];
 		$this->oauth_identity = $oauth_identity;
 
 		$matched_user = $this->dataporten_find_match_users($oauth_identity);
@@ -386,18 +376,6 @@ class Dataporten_oAuth {
 				$redirect_url = $last_url == site_url() . "/wp-login.php" ? site_url() : $last_url;
 				break;
 		}
-		/*$redirect_method = strpos($last_url, "wp-admin/profile.php") ? "last_page" : get_option("dataporten_login_redirect");
-		$redirect_url    = "";
-
-		switch($redirect_method) {
-			case "home_page":
-				$redirect_url = site_url();
-				break;
-			case "last_page":
-				$redirect_url = $last_url;
-				break;
-		}
-*/
 		wp_safe_redirect($redirect_url);
 		die();
 	}
@@ -472,22 +450,9 @@ class Dataporten_oAuth {
 				update_option('dataporten_default_role_enabled', $this->settings['dataporten_default_role_enabled']);
 			}
 		}
-		/*if(getenv('DATAPORTEN_DEFAULT_ROLE_REALM')) {
-			define('DATAPORTEN_DEFAULT_ROLE_REALM' , getenv('DATAPORTEN_DEFAULT_ROLE_REALM'));
-
-			$this->settings['dataporten_default_role_realm'] = DATAPORTEN_DEFAULT_ROLE_REALM;
-
-			if(get_option('dataporten_default_role_realm') != getenv('DATAPORTEN_DEFAULT_ROLE_REALM')){
-				update_option('dataporten_default_role_realm', $this->settings['dataporten_default_role_realm']);
-			}
-		}*/
-		//print_r(json_decode(getenv('DATAPORTEN_ROLESETS')));
 		if(getenv('DATAPORTEN_ROLESETS')) {
-			//define('DATAPORTEN_ROLESETS' , );
 
 			$this->settings['dataporten_rolesets'] = json_decode(getenv('DATAPORTEN_ROLESETS'), true);
-			//print_r("foo");
-			//print_r($this->settings['dataporten-rolesets']);
 
 			if(get_option('dataporten_rolesets') != getenv('DATAPORTEN_ROLESETS')){
 				update_option('dataporten_rolesets', json_encode($this->settings['dataporten_rolesets']));

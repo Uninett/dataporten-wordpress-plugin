@@ -3,7 +3,6 @@
 class Dataporten_oAuth_settings {
 	
 	private $dataporten_main;
-	private $test = "test";
 
 	public function __construct($dataporten_main) {
 		$this->dataporten_main = $dataporten_main;
@@ -14,9 +13,6 @@ class Dataporten_oAuth_settings {
 		include 'settings-view.php';
 	}
 
-	public function get_main() {
-		return "abcde";
-	}
 }
 
 ?>

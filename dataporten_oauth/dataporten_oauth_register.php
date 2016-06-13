@@ -19,7 +19,6 @@ class Dataporten_oAuth_register {
 		}
 		$this->dataporten_main = $dataporten_main;
 		$this->oauth_identity  = $oauth_identity;
-		// Registration initated from an ouath provider
 		if($oauth_identity['id'] != ""){
 			$this->username = $oauth_identity['id'];
 			$this->password = wp_generate_password();
@@ -54,7 +53,6 @@ class Dataporten_oAuth_register {
 
 		$update_nickname_result = update_user_meta($user_id, "nickname", $this->nickname);
 		
-		//$tmp_array = array(array("id"=> "fc:org:uninett.no"), array("id"=> "fc:org:systemeemes"),  array("id"=>"fc:org:system"), array("id"=>"mongo"));
 		$tmp_results = json_decode(get_option("dataporten_rolesets"), true);
 		$highest 	 = -1;
 		$name 		 = get_option('default_role');
@@ -89,11 +87,6 @@ class Dataporten_oAuth_register {
 			);
 
 			$user = wp_signon($credentials, false);
-
-			//wp_new_user_notification($user_id, $this->password);
-			//$_SESSION['dataporten']['result'] = "You have been registered successfully!";
-			/*header("Location: " . site_url());
-			exit;*/
 			$this->dataporten_main->dataporten_end_login("You have been registered successfully!", 0);
 		}
 	}
