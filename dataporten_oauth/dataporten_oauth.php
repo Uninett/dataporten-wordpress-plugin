@@ -4,7 +4,7 @@
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0. 
-Version: 0.2
+Version: 0.3
 Author: UNINETT
 Author URI: https://uninett.no
 License: GPL2
@@ -23,7 +23,7 @@ class Dataporten_oAuth {
 	//
 	//
 
-	const PLUGIN_VERSION = "0.2";
+	const PLUGIN_VERSION = "0.3";
 
 	private static $instance;
 	private $oauth_identity;
@@ -85,7 +85,7 @@ class Dataporten_oAuth {
 		add_action('wp_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('login_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_enqueue_scripts', array($this, 'dataporten_style_script'));
-		add_action('admin_init', array($this, 'dataporten_activate'));
+		add_action('admin_init', array($this, 'dataporten_activate_admin'));
 		add_filter('plugin_action_links_$plugin', array($this, 'dataporten_settings_link'));
 		add_action('show_user_profile', array($this, 'dataporten_linked_account'));
 		add_action('wp_logout', array($this, 'dataporten_end_logout'));
@@ -173,7 +173,6 @@ class Dataporten_oAuth {
 		}
 
 		$_SESSION['dataporten']['last_url'] = "";
-		unset($_SESSION['dataporten']['last_url']);
 		session_destroy();
 		$redirect_method = get_option("dataporten_login_redirect");
 		$redirect_url    = "";
@@ -279,6 +278,39 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_activate() {
+		$this->define_environment();
+
+		foreach ($this->settings as $setting_name => $default_value) {
+			register_setting('dataporten_settings', $setting_name);
+		}
+
+		$this->dataporten_new_table();
+	}
+
+	//
+	//
+	//	Creates a new table for the database that's to contain the states and redirect url of that state
+	//
+	//
+
+	private function dataporten_new_table() {
+		global $wpdb;
+
+   		$table_name = $wpdb->prefix.'dataporten_oauth';
+   		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE $table_name (
+			id int(11) NULL AUTO_INCREMENT,
+			state text NOT NULL UNIQUE,
+			url text DEFAULT '' NOT NULL,
+			UNIQUE KEY id (id)
+		) $charset_collate";
+
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		dbDelta( $sql );
+	}
+
+	function dataporten_activate_admin() {
 		$this->define_environment();
 
 		foreach ($this->settings as $setting_name => $default_value) {
@@ -443,7 +475,7 @@ class Dataporten_oAuth {
 			if(get_option('dataporten_default_role_enabled')) {
 				$this->dataporten_check_authority($this->oauth_identity);
 			}
-			$this->dataporten_end_login("Logged in successfully!", 0);
+			$this->dataporten_end_login("Logged in successfully!", 0, $this->oauth_identity["url"]);
 		} else if (is_user_logged_in()) {
 			global $current_user;
 			get_currentuserinfo();
@@ -456,14 +488,14 @@ class Dataporten_oAuth {
 				$this->dataporten_check_authority($this->oauth_identity);
 			}
 
-			$this->dataporten_end_login("Your account was linked successfully with dataporten.", 1);
+			$this->dataporten_end_login("Your account was linked successfully with dataporten.", 1, $this->oauth_identity["url"]);
 		} else if (!is_user_logged_in() && !$matched_user) {
 			include 'dataporten_oauth_register.php';
 
 			$register = new Dataporten_oAuth_register($this, $oauth_identity);
 			$register->dataporten_create_user();
 		} else {
-			$this->dataporten_end_login("Sorry, we couldn't log you in. The login flow terminated in an unexpected way. Please notify the admin or try again later.", -1);
+			$this->dataporten_end_login("Sorry, we couldn't log you in. The login flow terminated in an unexpected way. Please notify the admin or try again later.", -1, $this->oauth_identity["url"]);
 		}
 
 	}
@@ -530,10 +562,8 @@ class Dataporten_oAuth {
 	//
 	//
 
-	function dataporten_end_login($message, $state) {
-		$last_url = $_SESSION['dataporten']['last_url'];
-		$_SESSION['dataporten']['last_url'] = "";
-		unset($_SESSION['dataporten']['last_url']);
+	function dataporten_end_login($message, $state, $url) {
+		$last_url = $url;
 		$_SESSION['dataporten']['result'] = $message;
 		switch($state){
 			case -1:

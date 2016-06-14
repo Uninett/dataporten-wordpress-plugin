@@ -14,6 +14,7 @@ class Dataporten_oAuth_login {
 	private $access_token;
 	private $expires_in;
 	private $expires_at;
+	private $url;
 	const   URL_AUTH  = 'https://auth.dataporten.no/oauth/authorization?';
 	const   URL_TOKEN = 'https://auth.dataporten.no/oauth/token?';
 	const   URL_USER  = 'https://auth.dataporten.no/userinfo?';
@@ -29,8 +30,6 @@ class Dataporten_oAuth_login {
 	//
 
 	public function __construct($dataporten_main){
-
-		$_SESSION['dataporten']['provider'] = 'Dataporten';
 
 		$this->dataporten_main = $dataporten_main;
 		$this->http_util       = get_option('dataporten_http_util');
@@ -48,7 +47,7 @@ class Dataporten_oAuth_login {
 				$this->redirect_url = strtok($_SERVER['HTTP_REFERER'], '?');
 			}
 
-			if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $_SESSION['dataporten']['last_url'] = $this->redirect_url;
+			if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $this->url = $this->redirect_url;
 		}
 	}
 
@@ -65,14 +64,33 @@ class Dataporten_oAuth_login {
 	//
 	//
 	//	Setup after authentication. Gets authentication token, and logs in the 
-	//	user depending on the identity of the user.
+	//	user depending on the identity of the user. Checks whether the state gotten from
+	//	the oAuth2.0 server is the same saved in the database. If it is, it deletes the
+	//	entry in the database, fetches the saved url from the state variable, and adds
+	//	it to the identity variable that's sent to dataporten_login_user. If the states
+	//	doesn't match, the login is terminated.
 	//
 	//
 
 	public function post_auth() {
-		if ($_SESSION['dataporten']['state'] == $_GET['state']) {
-			$this->get_oauth_token($this->dataporten_main);
-			$this->dataporten_main->dataporten_login_user($this->get_oauth_identity());
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'dataporten_oauth';
+
+		$str = mb_convert_encoding($_GET['state'], 'UTF-8', 'UTF-8');
+		$str = htmlentities($str, ENT_QUOTES, 'UTF-8');
+		$states = $wpdb->get_results( "SELECT state, url FROM $table_name WHERE state = '$str'", ARRAY_A );
+
+		if(count($states) == 1 && $states["0"]["state"] == $_GET['state']) {
+			$state 		  = $states["0"]["state"];
+			$query_string = $wpdb->prepare("DELETE FROM $table_name WHERE $table_name.state = %d", $state);
+			$query_result = $wpdb->query($query_string);
+
+			$this->get_oauth_token();
+			$identity = $this->get_oauth_identity();
+			$identity["url"] = $states["0"]["url"];
+			$this->dataporten_main->dataporten_login_user($identity);
+		} else {
+			$this->dataporten_main->dataporten_end_login("Something went wrong with the login. Please try again", -1, "foo");
 		}
 	}
 
@@ -106,9 +124,7 @@ class Dataporten_oAuth_login {
 		if (!$access_token || !$expires_in) {
 
 			$_SESSION["dataporten"]["result"] = "Access-token wasn't found. Please contact an admin or try again later.";
-			$last_url = $_SESSION['dataporten']['last_url'];
-			unset($_SESSION['dataporten']['last_url']);
-			header("Location: " . $last_url); exit;
+			header("Location: " . wp_login_url()); exit;
 
 		} else {
 			$this->access_token = $access_token;
@@ -152,9 +168,7 @@ class Dataporten_oAuth_login {
 		if (!$oauth_identity['id']) {
 
 			$_SESSION["dataporten"]["result"] = "Could not complete the login. Please contact an admin or try again later.";
-			$last_url = $_SESSION['dataporten']['last_url'];
-			unset($_SESSION['dataporten']['last_url']);
-			header("Location: " . $last_url); exit;
+			header("Location: " . wp_login_url()); exit;
 
 		} return $oauth_identity;
 	}
@@ -167,18 +181,41 @@ class Dataporten_oAuth_login {
 	//
 
 	private function get_auth_code() {
+		$state  = uniqid('', true);
 		$params = array(
-			'client_id' => $this->client_id,
+			'client_id' 	=> $this->client_id,
 			'response_type' => 'code',
 			'redirect_uri'  => $this->redirect_uri,
-			'state' 		=> uniqid('', true),
+			'state' 		=> $state,
 		);
 
-		$_SESSION['dataporten']['state'] = $params['state'];
+		$this->insert_state($state);
+
 		$url = Dataporten_oAuth_login::URL_AUTH . http_build_query($params);
 		
 		header("Location: $url");
 		exit;
+	}
+
+	//
+	//
+	//	Adds the created state to the database for later references
+	//
+	//
+
+	private function insert_state($state) {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . 'dataporten_oauth';
+		$url 		= $this->url ? $this->url : "";
+
+		$wpdb->insert( 
+			$table_name, 
+			array( 
+				'state' => $state, 
+				'url' 	=> $url, 
+			) 
+		);
 	}
 
 	//
