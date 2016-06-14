@@ -3,7 +3,7 @@ Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
 Tested up to: 4.5.2
-Stable tag: 0.2
+Stable tag: 0.3
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,10 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 0.3 =
+* Security update
+* States are now added to database, with an url. This can be extracted so we don't have to rely on sessions for previous urls.
 
 = 0.2 =
 * Bug fixes
