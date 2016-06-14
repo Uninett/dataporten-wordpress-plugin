@@ -11,7 +11,7 @@ License: GPL2
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-define('WP_DEBUG', true);
+define('WP_DEBUG', false);
 session_start();
 
 class Dataporten_oAuth {
