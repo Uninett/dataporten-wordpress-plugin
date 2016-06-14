@@ -10,6 +10,15 @@ class Dataporten_oAuth_register {
 	private $oauth_identity;
 	private $role;
 
+	//
+	//
+	//	Construct function for register class. Tells the user if the registration 
+	//	is disabled at the current account, and redirecting the user. Sets all 
+	//	variables, and generates password. Creates nickname from email, since the 
+	//	username is set to be id of user. This can be changed later.
+	//
+	//
+
 	public function __construct($dataporten_main, $oauth_identity) {
 		if(!get_option("users_can_register")) {
 			$_SESSION['dataporten']['result'] = "Sorry, user registration is disabled at this time. Your account could not be registered";
@@ -32,6 +41,16 @@ class Dataporten_oAuth_register {
 		}
 	}
 
+	//
+	//
+	//	Takes in the groups priority from dataporten_rolesets and creates user. 
+	//	Sets username, display name and all required fields of an account. Sets 
+	//	the role-name to default_role. If dataporten_default_role_enabled is enabled, 
+	//	it checks the intended role of the user. Then links the dataporten account 
+	//	with the wordpress account.
+	//
+	//
+
 	public function dataporten_create_user() {
 		global $wpdb;
 		$groups_priority = json_decode(get_option("dataporten_rolesets"), true);
@@ -53,32 +72,32 @@ class Dataporten_oAuth_register {
 
 		$update_nickname_result = update_user_meta($user_id, "nickname", $this->nickname);
 		
-		$tmp_results = json_decode(get_option("dataporten_rolesets"), true);
-		$highest 	 = -1;
 		$name 		 = get_option('default_role');
+		if(get_option('dataporten_default_role_enabled')) {
+			$tmp_results = json_decode(get_option("dataporten_rolesets"), true);
+			$highest 	 = -1;
+			
 
-		foreach($this->groups as $tmp) {
-			$curr_index = array_search($tmp["id"], array_keys($tmp_results));
-			if($curr_index > $highest) {
-				$highest = $curr_index;
-				$name    = $tmp_results[$tmp["id"]];
+			foreach($this->groups as $tmp) {
+				$curr_index = array_search($tmp["id"], array_keys($tmp_results));
+				if($curr_index > $highest) {
+					$highest = $curr_index;
+					$name    = $tmp_results[$tmp["id"]];
+				}
 			}
+
+			$this->role = $name;
 		}
-
-		$this->role = $name;
-
 		$update_role_result = wp_update_user(array('ID' => $user_id, 'role' => $this->role));
 
 		if ($update_username_result == false || $update_nickname_result == false) {
-			// there was an error during registration, redirect and notify the user:
 			$_SESSION["dataporten"]["result"] = "Could not rename the username during registration. Please contact an admin or try again later.";
 			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
 		} elseif ($update_role_result == false) {
-			// there was an error during registration, redirect and notify the user:
 			$_SESSION["dataporten"]["result"] = "Could not assign default user role during registration. Please contact an admin or try again later.";
 			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
 		} else {
-			$this->dataporten_main->dataporten_link_account($user_id);
+			$this->dataporten_main->dataporten_link_account($user_id, $this->oauth_identity);
 
 			$credentials = array(
 				'user_login'  	=> $this->username,

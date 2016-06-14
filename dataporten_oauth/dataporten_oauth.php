@@ -11,10 +11,17 @@ License: GPL2
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-define('WP_DEBUG', false);
+define('WP_DEBUG', true);
 session_start();
 
 class Dataporten_oAuth {
+
+	//
+	//
+	//	Class initialization. Defines plugin version, and a singleton class pattern, 
+	//  ensuring there is only one instance of the class globally.
+	//
+	//
 
 	const PLUGIN_VERSION = "0.2";
 
@@ -26,6 +33,12 @@ class Dataporten_oAuth {
 			self::$instance = new self;
 		return self::$instance;
 	}
+
+	//
+	//
+	//	Default settings to be added to the database.
+	//
+	//
 
 	private $settings = array(
 		'dataporten_http_util' 		  		=> 'curl',
@@ -42,6 +55,12 @@ class Dataporten_oAuth {
 
 	);
 
+	//
+	//
+	//	Constructor. Adding hook for init, and updating of plugin.
+	//
+	//
+
 	function __construct() {
 		register_activation_hook(__FILE__, array($this, 'dataporten_activate'));
 		register_deactivation_hook(__FILE__, array($this, 'dataporten_deactivate'));
@@ -49,6 +68,12 @@ class Dataporten_oAuth {
 		add_action('plugins_loaded', array($this, 'dataporten_update'));
 		add_action('init', array($this, 'dataporten_init'));
 	}
+
+	//
+	//
+	//	Hooks for the different menus, filters for views and script injection.
+	//
+	//
 
 	function dataporten_init() {
 		$this->define_environment();
@@ -62,15 +87,23 @@ class Dataporten_oAuth {
 		add_action('admin_enqueue_scripts', array($this, 'dataporten_style_script'));
 		add_action('admin_init', array($this, 'dataporten_activate'));
 		add_filter('plugin_action_links_$plugin', array($this, 'dataporten_settings_link'));
-		add_action('show_user_profile', array($this, 'dataporten_linked_accounts'));
+		add_action('show_user_profile', array($this, 'dataporten_linked_account'));
 		add_action('wp_logout', array($this, 'dataporten_end_logout'));
 		add_action('login_message', array($this, 'dataporten_login_screen'));
 		add_action('wp_footer', array($this, 'dataporten_push_login_messages'));
 		add_filter('admin_footer', array($this, 'dataporten_push_login_messages'));
 		add_filter('login_footer', array($this, 'dataporten_push_login_messages'));
+		add_filter('comment_form_defaults', array($this, 'dataporten_custom_comments'));
 	}
 
-	function dataporten_linked_accounts() {
+	//
+	//
+	//	Function for populating the profile settings view with whether the account has 
+	//  been linked with dataporten or not. Spouts a notice if the account is updated.
+	//
+	//
+
+	function dataporten_linked_account() {
 		global $current_user;
 		global $wpdb;
 
@@ -87,6 +120,12 @@ class Dataporten_oAuth {
 		} else if(isset($_GET["unlinked"]) && $_GET['unlinked'] == 0) {
 			add_action( 'admin_notices', $this->dataporten_unlinked_notice("Oops.. Something went wrong when trying to unlink your account. Are you sure you're you?", "error") );
 		}
+
+		//
+		//	Checks whether the account has been linked or not. If not, it adds a 
+		//  button for linking the account. If it has, it adds a button for unlinking the account.
+		//
+
 		if (count($query_result) == 0){
 			$site_url      = get_bloginfo('url');
 			$button_params = array(
@@ -118,6 +157,13 @@ class Dataporten_oAuth {
 		}
 	}
 
+	//
+	//
+	//	Logs the user out of wordpress, deletes the _SESSION variables, and redirects the 
+	//  user to another page.
+	//
+	//
+
 	function dataporten_end_logout() {
 		$_SESSION['dataporten']['result'] = 'Logged out successfully.';
 		if (is_user_logged_in()) {
@@ -126,8 +172,9 @@ class Dataporten_oAuth {
 			$last_url = strtok($_SERVER['HTTP_REFERER'], '?');
 		}
 
+		$_SESSION['dataporten']['last_url'] = "";
 		unset($_SESSION['dataporten']['last_url']);
-		$this->dataporten_clear_login_state();
+		session_destroy();
 		$redirect_method = get_option("dataporten_login_redirect");
 		$redirect_url    = "";
 
@@ -143,6 +190,13 @@ class Dataporten_oAuth {
 		die();
 	}
 
+	//
+	//
+	//	Injects the stylesheet and JavaScript to the page. Makes hide_login_form available 
+	//  for read for the JavaScript, and enables the native loginscreen to be hidden.
+	//
+	//
+
 	function dataporten_style_script() {
 		$dataporten_vars = array(
 			'hide_login_form' => get_option('dataporten_hide_native_wp'),
@@ -151,6 +205,14 @@ class Dataporten_oAuth {
 		wp_localize_script('dataporten_vars', 'dataporten_variables', $dataporten_vars);
 		wp_enqueue_style('dataporten-stylesheet', plugin_dir_url( __FILE__ ) . '/css/dataporten-oauth.css', array());
 	}
+
+	//
+	//
+	//	Unlinks an user-account from Dataporten where the users dataporten id is found, along 
+	//  with the row of the data for extra security. Redirects the user to another page 
+	//  depending on it completing or not.
+	//
+	//
 
 	function dataporten_unlink_account() {
 		global $current_user;
@@ -169,6 +231,13 @@ class Dataporten_oAuth {
 		}	
 	}
 
+	//
+	//
+	//	Manipulates the login screen of Wordpress, adding a button if dataporten has been enabled. Includes 
+	//  login-view.php as the button view. Text of button changes depending on whether the user is logged in or not.
+	//
+	//
+
 	function dataporten_login_screen() {
 		if (get_option("dataporten_oauth_enabled")) {
 			$site_url = get_bloginfo('url');
@@ -176,8 +245,9 @@ class Dataporten_oAuth {
 				$text = "Logout";
 				$link = wp_logout_url();
 			} else {
+				$redirect_to = isset($_GET['redirect_to']) ? "&redirect_to=" . $_GET['redirect_to'] : "";
 				$text = "Login with Dataporten";
-				$link = $site_url . "?connect=dataporten";
+				$link = $site_url . "?connect=dataporten" . $redirect_to;
 			}
 			$button_params = array(
 				'text'  => $text,
@@ -189,11 +259,24 @@ class Dataporten_oAuth {
 		}
 	}
 
+	//
+	//
+	//	Enables native wordpress feedback to the user in the admin-panel.
+	//
+	//
+
 	function dataporten_unlinked_notice($msg, $type) {
 		echo '<div class="' . $type . ' notice">';
     	echo '<p>' . $msg . '</p>';
 		echo '</div>';
 	}
+
+	//
+	//
+	//	Function being run when the plugin is activated for the first time. Populates the database with default 
+	//  options.
+	//
+	//
 
 	function dataporten_activate() {
 		$this->define_environment();
@@ -203,11 +286,23 @@ class Dataporten_oAuth {
 		}
 	}
 
+	//
+	//
+	//	Adding a settings button to plugin view for the plugin. (NOT WORKING for some reason).
+	//
+	//
+
 	function dataporten_settings_link($links) {
 		$settings_link = "<a href='options-general.php?page=Dataporten-oAuth'>Settings</a>"; // CASE SeNsItIvE filename!
 		array_unshift($links, $settings_link); 
 		return $links; 
 	}
+
+	//
+	//
+	//	Defines what will happen when the plugin is updated. Runs function for adding the data to the database.
+	//
+	//
 
 	function dataporten_update() {
 		$plugin_version    = Dataporten_oAuth::PLUGIN_VERSION;
@@ -222,11 +317,23 @@ class Dataporten_oAuth {
 		}
 	}
 
+	//
+	//
+	//	Adds missing data to database. Currently it removes all settings.
+	//
+	//
+
 	function dataporten_update_missing_db() {
 		foreach($this->settings as $setting_name => $default_value) {
 			update_option($setting_name, $default_value);
 		}
 	}
+
+	//
+	//
+	//	Notice informing the user that the plugin has been updated.
+	//
+	//
 
 	function dataporten_update_notice() {
 		$settings_link = "<a href='options-general.php?page=Dataporten-oAuth'>Settings Page</a>";
@@ -235,70 +342,97 @@ class Dataporten_oAuth {
 		echo "</div>";
 	}
 
+	//
+	//
+	//	Function not in use. Maybe this should remove the data?
+	//
+	//
+
 	function dataporten_deactivate() {
 	}
+
+	//
+	//
+	//	Adds link to the plugin when hovering over settings in admin menu.
+	//
+	//
 
 	function dataporten_settings_page() {
 		add_options_page( 'Dataporten-oAuth Options', 'Dataporten-oAuth', 'manage_options', 'Dataporten-oAuth', array($this, 'dataporten_settings_page_content') );
 	}
 
+	//
+	//
+	//	Prints settings page.
+	//
+	//
+
 	function dataporten_settings_page_content() {
 		if (!current_user_can( 'manage_options' )) {
 			wp_die( __( 'You do not have sufficient permissions to access this page.' ));
 		}
+		include 'dataporten_oauth_settings.php';
+
 		$settings_page = new Dataporten_oAuth_settings($this);
 
 		$settings_page->print_settings();
 	}
 
+	//
+	//
+	//	Defines the qvars to be used.
+	//
+	//
+
 	function dataporten_qvar_triggers($vars) {
 		$vars[] = 'connect';
 		$vars[] = 'code';
-		$vars[] = 'error_description';
-		$vars[] = 'error_message';
+		//$vars[] = 'error_description';
+		//$vars[] = 'error_message';
 		$vars[] = 'disconnect';
 		return $vars;
 	}
 
+	//
+	//
+	//	Handlers for the above defined qvars.
+	//
+	//
+
 	function dataporten_qvar_handlers() {
+		include 'dataporten_oauth_login.php';
+
+		$login_obj = new Dataporten_oAuth_login($this);
 		if (get_query_var('connect')) {
 
-			$this->dataporten_include_connector('connect');
+			$login_obj->pre_auth();
 
 		} elseif (get_query_var('code')) {
 
-			$this->dataporten_include_connector('code');
+			$login_obj->post_auth();
 
-		} elseif (get_query_var('error_description') || get_query_var('error_message')) {
-			$this->dataporten_include_connector();
 		} else if(get_query_var('disconnect')) {
-			$this->dataporten_include_connector('disconnect');
+			$this->dataporten_unlink_account();
 		}
 	}
 
-	function dataporten_include_connector($type) {
-		$login_obj = new Dataporten_oAuth_login($this);
-		switch($type){
-			case 'connect':
-				$login_obj->pre_auth();
-				break;
-			case 'code':
-				$login_obj->post_auth();
-				break;
-			case 'disconnect':
-				$this->dataporten_unlink_account();
-				break;
-			default:
-				break;
-		}
-	}
+	//
+	//
+	//	Function for loggin in the user. Takes in a variable with the dataporten users id, groups and email. 
+	//  If the user is matched in the database, but not logged in, we login the user. If the user is logged in 
+	//  (can be matched here also, so we have to check whether or not there is a match later on. This to prevent
+	//  two or more accounts be linked with the same account), he/she is then linked with the desired Dataporten 
+	//  account. If the user isn't logged in, nor there is a match in the database, we create a new user.
+	//	Always checks the users role if the dataporten_default_role_enabled is enabled. This to check whether the
+	//	environment variables have been changed, and the user is supposed to have a different role.
+	//
+	//
 
 	function dataporten_login_user($oauth_identity) {
 		$this->oauth_identity = $oauth_identity;
 
 		$matched_user = $this->dataporten_find_match_users($oauth_identity);
 
-		
 		if ($matched_user && !is_user_logged_in()) {
 			$user_id = $matched_user->ID;
 			$user_login = $matched_user->user_login;
@@ -306,7 +440,9 @@ class Dataporten_oAuth {
 			wp_set_auth_cookie($user_id);
 			do_action('wp_login', $user_login, $matched_user);
 
-			$this->dataporten_check_authority($oauth_identity);
+			if(get_option('dataporten_default_role_enabled')) {
+				$this->dataporten_check_authority($this->oauth_identity);
+			}
 			$this->dataporten_end_login("Logged in successfully!", 0);
 		} else if (is_user_logged_in()) {
 			global $current_user;
@@ -314,19 +450,31 @@ class Dataporten_oAuth {
 
 			$user_id = $current_user->ID;
 
-			$this->dataporten_link_account($oauth_identity);
-			$this->dataporten_check_authority($user_id);
+			$this->dataporten_link_account($user_id, $oauth_identity);
+
+			if(get_option('dataporten_default_role_enabled')) {
+				$this->dataporten_check_authority($this->oauth_identity);
+			}
+
 			$this->dataporten_end_login("Your account was linked successfully with dataporten.", 1);
 		} else if (!is_user_logged_in() && !$matched_user) {
+			include 'dataporten_oauth_register.php';
 
 			$register = new Dataporten_oAuth_register($this, $oauth_identity);
-
 			$register->dataporten_create_user();
 		} else {
 			$this->dataporten_end_login("Sorry, we couldn't log you in. The login flow terminated in an unexpected way. Please notify the admin or try again later.", -1);
 		}
 
 	}
+
+	//
+	//
+	//	Updates the current users role depending on the rolesets defined in the database.
+	//  The occurence with the highest index, is the one that is kept. This means that
+	//  you have to have this in mind when defining the environment variables.	
+	//
+	//
 
 	function dataporten_check_authority($identity) {
 		global $current_user, $wpdb;
@@ -351,15 +499,22 @@ class Dataporten_oAuth {
 		}
 	}
 
-	function dataporten_link_account($user_id) {
-		if ($this->oauth_identity['id'] != '') {
-			global $wpdb;
+	//
+	//
+	//	Tries to link account with dataporten, but first checks if the account already
+	//  are linked. If there isn't an occurence of the account in the database, it will 
+	//	link with the current account. If the account already exists, the user will be 
+	//	informed.
+	//
+	//
 
-			$usermeta_table = $wpdb->usermeta;
-			$query_string   = "SELECT * FROM $usermeta_table WHERE $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.meta_value LIKE '%" . $this->oauth_identity['provider'] . "|" . $this->oauth_identity['id'] . "%'";
-			$query_result   = $wpdb->get_var($query_string);
-			if(count($query_result) <= 0){
-				add_user_meta($user_id, 'dataporten_identity', 'dataporten|' . $this->oauth_identity['id'] . '|' . time());
+	function dataporten_link_account($user_id, $oauth_identity) {
+		if ($this->oauth_identity['id'] != '') {
+
+			$matched_user = $this->dataporten_find_match_users($oauth_identity);
+
+			if(!$matched_user){
+				add_user_meta($user_id, 'dataporten_identity', 'dataporten|' . $oauth_identity['id'] . '|' . time());
 			} else {
 				$_SESSION['dataporten']['result'] = "Someone has already linked that account.";
 				wp_safe_redirect(site_url());
@@ -368,12 +523,18 @@ class Dataporten_oAuth {
 		}
 	}
 
-	function dataporten_end_login($message, $state) {
+	//
+	//
+	//  Ends the login "session", and redirects the user to a predetermined location, depending on
+	//  the $state parameter.	
+	//
+	//
 
+	function dataporten_end_login($message, $state) {
 		$last_url = $_SESSION['dataporten']['last_url'];
+		$_SESSION['dataporten']['last_url'] = "";
 		unset($_SESSION['dataporten']['last_url']);
 		$_SESSION['dataporten']['result'] = $message;
-		$this->dataporten_clear_login_state();
 		switch($state){
 			case -1:
 				$redirect_url = wp_login_url();
@@ -385,12 +546,18 @@ class Dataporten_oAuth {
 				die();
 				break;
 			case 0:
-				$redirect_url = $last_url == site_url() . "/wp-login.php" ? site_url() : $last_url;
+				$redirect_url = $last_url == site_url() . "/wp-login.php" ? site_url() : $last_url == "" ? site_url() : $last_url;
 				break;
 		}
 		wp_safe_redirect($redirect_url);
 		die();
 	}
+
+	//
+	//
+	//	Finds a match of the user, to see if the user already exists in the database.	
+	//
+	//
 
 	function dataporten_find_match_users($oauth_identity) {
 		global $wpdb;
@@ -403,23 +570,31 @@ class Dataporten_oAuth {
 		return $user;
 	}
 
+	//
+	//
+	//	Adds a message to the wordpress page if there is a result.
+	//
+	//
+
 	function dataporten_push_login_messages() {
 		$result = $_SESSION['dataporten']['result'];
 		unset($_SESSION['dataporten']['result']);
-		echo "<div id='dataporten_outer'>";
-		echo "<div id='dataporten_result'>" . $result . "</div>";
-		echo "</div>";
+		if($result) {
+			echo "<div id='dataporten_outer'>";
+			echo "<div id='dataporten_result'>" . $result . "</div>";
+			echo "</div>";
+		}
 	}
 
-	function dataporten_clear_login_state() {
-		unset($_SESSION['dataporten']['user_id']);
-		unset($_SESSION['dataporten']['user_email']);
-		unset($_SESSION['dataporten']['access_token']);
-		unset($_SESSION['dataporten']['expires_in']);
-		unset($_SESSION['dataporten']['expires_at']);
-		unset($_SESSION['dataporten']['user_name']);
-
-	}
+	//
+	//
+	//	Defines the environment variables. If there is anything different from the 
+	//  environment variables defined in env.list, the already existing ones in the 
+	//  database is replaced. It also checks whether the environment variables are 
+	//  defined, making it so the plugin can be used standalone, without docker and 
+	//  environment variables.	
+	//
+	//
 
 	private function define_environment() {
 		if(	getenv('DATAPORTEN_CLIENTID') && getenv('DATAPORTEN_CLIENTSECRET') && getenv('DATAPORTEN_SCOPES') && getenv('HOST')) {
@@ -471,10 +646,23 @@ class Dataporten_oAuth {
 			}
 		}
 	}
-}
 
-spl_autoload_register(function ($class_name) {
-	include strtolower($class_name) . '.php';
-});
+	function dataporten_custom_comments() {
+		if (get_option("dataporten_oauth_enabled")) {
+			$site_url = get_bloginfo('url');
+			if(!is_user_logged_in()) {
+				$text = "Login with Dataporten";
+				$link = $site_url . "?connect=dataporten&redirect_to=http://" . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
+			}
+			$button_params = array(
+				'text'  => $text,
+				'class' => 'login-page-button',
+				'href'  => $link,
+				);
+			$profile = false;
+			include 'login-view.php';
+		}
+	}
+}
 
 Dataporten_oAuth::get_instance();

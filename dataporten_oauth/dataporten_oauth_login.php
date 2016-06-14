@@ -1,5 +1,7 @@
 <?php
 
+session_start();
+
 class Dataporten_oAuth_login {
 	
 	private $redirect_url;
@@ -17,6 +19,15 @@ class Dataporten_oAuth_login {
 	const   URL_USER  = 'https://auth.dataporten.no/userinfo?';
 	const 	URL_GROUP = 'https://groups-api.dataporten.no/groups/me/groups?';
 
+	//
+	//
+	//	Construct function for login class. Takes in the dataporten main 
+	//	variables for easier access of its functions. Sets the last url 
+	//  session-variables, so that it will be possible to return to the 
+	//  last url before the oAuth-login were initiated.
+	//
+	//
+
 	public function __construct($dataporten_main){
 
 		$_SESSION['dataporten']['provider'] = 'Dataporten';
@@ -28,32 +39,50 @@ class Dataporten_oAuth_login {
 		$this->client_secret   = get_option('dataporten_oauth_clientsecret');
 		$this->redirect_uri    = get_option('dataporten_oauth_redirect_uri');
 		$this->scope 		   = get_option('dataporten_oauth_clientscopes');
-		
-		if(!$_SESSION["dataporten"]["last_url"]) {
+
+		if(!empty(esc_url($_GET['redirect_to']))) {
 			
 			$this->redirect_url = esc_url($_GET['redirect_to']);
 
 			if(empty($this->redirect_url)) {
 				$this->redirect_url = strtok($_SERVER['HTTP_REFERER'], '?');
 			}
-			if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') !== false) $_SESSION['dataporten']['last_url'] = $this->redirect_url;
+
+			if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $_SESSION['dataporten']['last_url'] = $this->redirect_url;
 		}
 	}
+
+	//
+	//
+	//	Setup before the authentication. Fetching authentication code.
+	//
+	//
 
 	public function pre_auth() {
-
-		if((empty($_SESSION['dataporten']['expires_at'])) || (time() > $_SESSION['dataporten']['expires_at'])) {
-			$this->dataporten_main->dataporten_clear_login_state();
-		}
 		$this->get_auth_code();
 	}
+
+	//
+	//
+	//	Setup after authentication. Gets authentication token, and logs in the 
+	//	user depending on the identity of the user.
+	//
+	//
 
 	public function post_auth() {
 		if ($_SESSION['dataporten']['state'] == $_GET['state']) {
 			$this->get_oauth_token($this->dataporten_main);
-			$this->dataporten_main->dataporten_login_user($this->get_oauth_identity($this));
+			$this->dataporten_main->dataporten_login_user($this->get_oauth_identity());
 		}
 	}
+
+	//
+	//
+	//	Function for getting oAuth-token from dataporten. Calls the create_curl for 
+	//	easier creation of curl-variable. Defines the accesstoken, expires in and expires at 
+	//	When token is fetched.
+	//
+	//
 
 	private function get_oauth_token() {
 		$code   = htmlspecialchars($_GET['code']);
@@ -77,7 +106,9 @@ class Dataporten_oAuth_login {
 		if (!$access_token || !$expires_in) {
 
 			$_SESSION["dataporten"]["result"] = "Access-token wasn't found. Please contact an admin or try again later.";
-			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
+			$last_url = $_SESSION['dataporten']['last_url'];
+			unset($_SESSION['dataporten']['last_url']);
+			header("Location: " . $last_url); exit;
 
 		} else {
 			$this->access_token = $access_token;
@@ -85,6 +116,14 @@ class Dataporten_oAuth_login {
 			$this->expires_at 	= $expires_at;
 		}
 	}
+
+	//
+	//
+	//	Fetches the users identity, and adds them to an array of parameters. If the
+	//	dataporten-default_role_enabled is enabled, the users group is fetched
+	//	enabling later scripts to assign a role to the user.
+	//
+	//
 
 	private function get_oauth_identity() {
 		$params = array(
@@ -94,6 +133,7 @@ class Dataporten_oAuth_login {
 		$url 		= Dataporten_oAuth_login::URL_USER . $url_params;
 		$result 	= curl_exec($this->create_curl($url, array('Authorization: Bearer ' . $this->access_token), false));
 		$result_obj = json_decode($result, true);
+		$result_grp = array();
 
 		if(get_option('dataporten_default_role_enabled')) {
 			$url_params = http_build_query($params);
@@ -106,16 +146,46 @@ class Dataporten_oAuth_login {
 			'provider' => 'dataporten',
 			'id' 	   => $result_obj['user']['userid'],
 			'email'    => $result_obj['user']['email'],
-			'groups'    => $result_grp,
+			'groups'   => $result_grp,
 		);
 
 		if (!$oauth_identity['id']) {
 
 			$_SESSION["dataporten"]["result"] = "Could not complete the login. Please contact an admin or try again later.";
-			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
+			$last_url = $_SESSION['dataporten']['last_url'];
+			unset($_SESSION['dataporten']['last_url']);
+			header("Location: " . $last_url); exit;
 
 		} return $oauth_identity;
 	}
+
+	//
+	//
+	//	Function for fetching auth_code. Builds http-query, and redirects the user
+	//	to dataporten login.
+	//
+	//
+
+	private function get_auth_code() {
+		$params = array(
+			'client_id' => $this->client_id,
+			'response_type' => 'code',
+			'redirect_uri'  => $this->redirect_uri,
+			'state' 		=> uniqid('', true),
+		);
+
+		$_SESSION['dataporten']['state'] = $params['state'];
+		$url = Dataporten_oAuth_login::URL_AUTH . http_build_query($params);
+		
+		header("Location: $url");
+		exit;
+	}
+
+	//
+	//
+	//	Local function for creating curl variables. To minimize the repetition of code.
+	//
+	//
 
 	private function create_curl($url, $header, $extended) {
 		$curl = curl_init();
@@ -131,21 +201,6 @@ class Dataporten_oAuth_login {
 			curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, (get_option('dataporten_http_util_verify_ssl') == 1 ? 2: 0));
 		}
 		return $curl;
-	}
-
-	private function get_auth_code() {
-		$params = array(
-			'client_id' => $this->client_id,
-			'response_type' => 'code',
-			'redirect_uri'  => $this->redirect_uri,
-			'state' 		=> uniqid('', true),
-		);
-
-		$_SESSION['dataporten']['state'] = $params['state'];
-		$url = Dataporten_oAuth_login::URL_AUTH . http_build_query($params);
-		
-		header("Location: $url");
-		exit;
 	}
 }
 
