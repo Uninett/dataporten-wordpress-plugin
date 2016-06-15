@@ -4,14 +4,14 @@
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0. 
-Version: 0.3
+Version: 0.4
 Author: UNINETT
 Author URI: https://uninett.no
 License: GPL2
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-define('WP_DEBUG', false);
+define('WP_DEBUG', true);
 session_start();
 
 class Dataporten_oAuth {
@@ -23,7 +23,7 @@ class Dataporten_oAuth {
 	//
 	//
 
-	const PLUGIN_VERSION = "0.3";
+	const PLUGIN_VERSION = "0.4";
 
 	private static $instance;
 	private $oauth_identity;
@@ -94,6 +94,7 @@ class Dataporten_oAuth {
 		add_filter('admin_footer', array($this, 'dataporten_push_login_messages'));
 		add_filter('login_footer', array($this, 'dataporten_push_login_messages'));
 		add_filter('comment_form_defaults', array($this, 'dataporten_custom_comments'));
+		add_action('dataporten_clear_states', array($this, 'dataporten_clear_states_cron'));
 	}
 
 	//
@@ -131,7 +132,7 @@ class Dataporten_oAuth {
 			$button_params = array(
 				'text'  => 'Link Dataporten',
 				'class' => 'dataporten-profile-page',
-				'href'  => $site_url . '?connect=dataporten'
+				'href'  => wp_nonce_url($site_url . '?connect=dataporten', "link_account", "link_nonce"),
 			);
 
 			include 'login-view.php';
@@ -151,7 +152,7 @@ class Dataporten_oAuth {
 
 			$button_params = array(
 				'text' => 'Unlink Dataporten',
-				'href' => $query,
+				'href' => wp_nonce_url(site_url() . '?disconnect=' . $query_results["umeta_id"], "link_account", "link_nonce"),
 			);
 			include 'login-view.php';
 		}
@@ -214,17 +215,21 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_unlink_account() {
-		global $current_user;
-		global $wpdb;
+		if(isset($_GET['link_nonce']) && wp_verify_nonce($_GET['link_nonce'], 'link_account')) {
+			global $current_user;
+			global $wpdb;
 
-		get_currentuserinfo();
-		$dataporten_identity_row = $_GET['disconnect'];
-		$user_id = $current_user->ID;
-		$usermeta_table = $wpdb->usermeta;
-		$query_string = $wpdb->prepare("DELETE FROM $usermeta_table WHERE $usermeta_table.user_id = $user_id AND $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.umeta_id = %d", $dataporten_identity_row);
-		$query_result = $wpdb->query($query_string);
-		if($query_result) {
-			header("Location: " . site_url() . "/wp-admin/profile.php?unlinked=1");
+			get_currentuserinfo();
+			$dataporten_identity_row = $_GET['disconnect'];
+			$user_id = $current_user->ID;
+			$usermeta_table = $wpdb->usermeta;
+			$query_string = $wpdb->prepare("DELETE FROM $usermeta_table WHERE $usermeta_table.user_id = $user_id AND $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.umeta_id = %d", $dataporten_identity_row);
+			$query_result = $wpdb->query($query_string);
+			if($query_result) {
+				header("Location: " . site_url() . "/wp-admin/profile.php?unlinked=1");
+			} else {
+				header("Location: " . site_url() . "/wp-admin/profile.php?unlinked=0");
+			}
 		} else {
 			header("Location: " . site_url() . "/wp-admin/profile.php?unlinked=0");
 		}	
@@ -246,7 +251,7 @@ class Dataporten_oAuth {
 			} else {
 				$redirect_to = isset($_GET['redirect_to']) ? "&redirect_to=" . $_GET['redirect_to'] : "";
 				$text = "Login with Dataporten";
-				$link = $site_url . "?connect=dataporten" . $redirect_to;
+				$link = wp_nonce_url($site_url . "?connect=dataporten" . $redirect_to, "link_account", "link_nonce");
 			}
 			$button_params = array(
 				'text'  => $text,
@@ -285,6 +290,31 @@ class Dataporten_oAuth {
 		}
 
 		$this->dataporten_new_table();
+		wp_schedule_event(time(), 'daily', 'dataporten_clear_states');
+	}
+
+	//
+	//
+	//	Deletes all previously unused states. Does this once every day.
+	//
+	//
+
+	private function dataporten_clear_states_cron() {
+		global $wpdb;
+
+		$remove_before 	= date("Y-m-d H:i:s", strtotime("-10 minutes"));
+		$table_name 	= $wpdb->prefix . 'dataporten_oauth';
+
+		$query_fetch  = $wpdb->get_results("SELECT * FROM $table_name WHERE $table_name.added < '$remove_before'", ARRAY_A);
+		$ids = "";
+		for($i = 0; $i < count($query_fetch); $i++) {
+			$ids = $ids . "id = " . $query_fetch["$i"]["id"];
+			if($i < count($query_fetch) - 1) {
+				$ids = $ids . " OR ";
+			}
+		}
+		$query_string = $wpdb->prepare("DELETE FROM $table_name WHERE $table_name.added < %s AND ($ids)", $remove_before);
+		$query_result = $wpdb->query($query_string);
 	}
 
 	//
@@ -303,6 +333,7 @@ class Dataporten_oAuth {
 			id int(11) NULL AUTO_INCREMENT,
 			state text NOT NULL UNIQUE,
 			url text DEFAULT '' NOT NULL,
+			added TIMESTAMP NOT NULL,
 			UNIQUE KEY id (id)
 		) $charset_collate";
 
@@ -381,6 +412,7 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_deactivate() {
+		wp_clear_scheduled_hook('dataporten_clear_states');
 	}
 
 	//
@@ -436,8 +468,11 @@ class Dataporten_oAuth {
 
 		$login_obj = new Dataporten_oAuth_login($this);
 		if (get_query_var('connect')) {
-
-			$login_obj->pre_auth();
+			if(!isset($_GET['link_nonce']) || !wp_verify_nonce($_GET['link_nonce'], 'link_account')) {
+				$this->dataporten_end_login("Nonce not matching. Are you sure you clicked a link from this page?", -1, "foo");
+			} else {
+				$login_obj->pre_auth();
+			}
 
 		} elseif (get_query_var('code')) {
 
@@ -445,7 +480,7 @@ class Dataporten_oAuth {
 
 		} else if(get_query_var('disconnect')) {
 			$this->dataporten_unlink_account();
-		}
+		} 
 	}
 
 	//

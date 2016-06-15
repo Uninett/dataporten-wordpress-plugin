@@ -76,11 +76,13 @@ class Dataporten_oAuth_login {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'dataporten_oauth';
 
-		$str = mb_convert_encoding($_GET['state'], 'UTF-8', 'UTF-8');
-		$str = htmlentities($str, ENT_QUOTES, 'UTF-8');
+		$str 	= mb_convert_encoding($_GET['state'], 'UTF-8', 'UTF-8');
+		$str 	= htmlentities($str, ENT_QUOTES, 'UTF-8');
 		$states = $wpdb->get_results( "SELECT state, url FROM $table_name WHERE state = '$str'", ARRAY_A );
+		$added  = strtotime($states["0"]["added"]);
 
-		if(count($states) == 1 && $states["0"]["state"] == $_GET['state']) {
+		if(count($states) == 1 && $states["0"]["state"] == $_GET['state']
+			&& $added + 600 < time()) {
 			$state 		  = $states["0"]["state"];
 			$query_string = $wpdb->prepare("DELETE FROM $table_name WHERE $table_name.state = %d", $state);
 			$query_result = $wpdb->query($query_string);
@@ -213,7 +215,8 @@ class Dataporten_oAuth_login {
 			$table_name, 
 			array( 
 				'state' => $state, 
-				'url' 	=> $url, 
+				'url' 	=> $url,
+				'added' => date("Y-m-d H:i:s"), 
 			) 
 		);
 	}

@@ -40,6 +40,10 @@ Yes.
 
 == Changelog ==
 
+= 0.4 =
+* Added nonce to links to prevent CSRF
+* Removing old states once every day, and checking whether the states are older than 10 minutes. If it is older than 10 minutes, the login is discarded.
+
 = 0.3 =
 * Security update
 * States are now added to database, with an url. This can be extracted so we don't have to rely on sessions for previous urls.
