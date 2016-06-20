@@ -40,6 +40,10 @@ Yes.
 
 == Changelog ==
 
+= 0.5 = 
+* Removed all use of sessions
+* Fixed errors showing up in DEBUG_MODE
+
 = 0.4 =
 * Added nonce to links to prevent CSRF
 * Removing old states once every day, and checking whether the states are older than 10 minutes. If it is older than 10 minutes, the login is discarded.
