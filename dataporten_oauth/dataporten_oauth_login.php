@@ -1,7 +1,5 @@
 <?php
 
-session_start();
-
 class Dataporten_oAuth_login {
 	
 	private $redirect_url;
@@ -23,9 +21,7 @@ class Dataporten_oAuth_login {
 	//
 	//
 	//	Construct function for login class. Takes in the dataporten main 
-	//	variables for easier access of its functions. Sets the last url 
-	//  session-variables, so that it will be possible to return to the 
-	//  last url before the oAuth-login were initiated.
+	//	variables for easier access of its functions. 
 	//
 	//
 
@@ -39,16 +35,15 @@ class Dataporten_oAuth_login {
 		$this->redirect_uri    = get_option('dataporten_oauth_redirect_uri');
 		$this->scope 		   = get_option('dataporten_oauth_clientscopes');
 
-		if(!empty(esc_url($_GET['redirect_to']))) {
-			
-			$this->redirect_url = esc_url($_GET['redirect_to']);
-
-			if(empty($this->redirect_url)) {
-				$this->redirect_url = strtok($_SERVER['HTTP_REFERER'], '?');
-			}
-
-			if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $this->url = $this->redirect_url;
+		
+		if(!isset($_GET['redirect_to']) && isset($_SERVER['HTTP_REFERER'])) {
+			$this->redirect_url = strtok($_SERVER['HTTP_REFERER'], '?');
+		} else if(isset($_GET['redirect_to'])){
+			$this->redirect_url = $_GET['redirect_to'];
 		}
+
+		if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $this->url = $this->redirect_url;
+	
 	}
 
 	//
@@ -78,11 +73,11 @@ class Dataporten_oAuth_login {
 
 		$str 	= mb_convert_encoding($_GET['state'], 'UTF-8', 'UTF-8');
 		$str 	= htmlentities($str, ENT_QUOTES, 'UTF-8');
-		$states = $wpdb->get_results( "SELECT state, url FROM $table_name WHERE state = '$str'", ARRAY_A );
+		$states = $wpdb->get_results( "SELECT * FROM $table_name WHERE state = '$str'", ARRAY_A );
 		$added  = strtotime($states["0"]["added"]);
 
 		if(count($states) == 1 && $states["0"]["state"] == $_GET['state']
-			&& $added + 600 < time()) {
+			&& $added + 600 > time()) {
 			$state 		  = $states["0"]["state"];
 			$query_string = $wpdb->prepare("DELETE FROM $table_name WHERE $table_name.state = %d", $state);
 			$query_result = $wpdb->query($query_string);
@@ -92,7 +87,7 @@ class Dataporten_oAuth_login {
 			$identity["url"] = $states["0"]["url"];
 			$this->dataporten_main->dataporten_login_user($identity);
 		} else {
-			$this->dataporten_main->dataporten_end_login("Something went wrong with the login. Please try again", -1, "foo");
+			$this->dataporten_main->dataporten_end_login("?error=2", -1, "foo");
 		}
 	}
 
@@ -124,9 +119,7 @@ class Dataporten_oAuth_login {
 		$expires_at   = time() + $expires_in;
 		
 		if (!$access_token || !$expires_in) {
-
-			$_SESSION["dataporten"]["result"] = "Access-token wasn't found. Please contact an admin or try again later.";
-			header("Location: " . wp_login_url()); exit;
+			header("Location: " . wp_login_url() . "?errors=5"); exit;
 
 		} else {
 			$this->access_token = $access_token;
@@ -168,9 +161,7 @@ class Dataporten_oAuth_login {
 		);
 
 		if (!$oauth_identity['id']) {
-
-			$_SESSION["dataporten"]["result"] = "Could not complete the login. Please contact an admin or try again later.";
-			header("Location: " . wp_login_url()); exit;
+			header("Location: " . wp_login_url() . "?errors=5"); exit;
 
 		} return $oauth_identity;
 	}

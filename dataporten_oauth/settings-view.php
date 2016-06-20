@@ -98,7 +98,7 @@
 				<label for="dataporten_redirect_uri">Redirect Uri:</label>
 			</th>
 			<td>
-				<input type="text" class="dataporten-settings-input" name="dataporten_oauth_redirect_uri" value="<?php echo get_option("dataporten_oauth_clientsecret"); ?>" id="dataporten_redirect_uri" />
+				<input type="text" class="dataporten-settings-input" name="dataporten_oauth_redirect_uri" value="<?php echo get_option("dataporten_oauth_redirect_uri"); ?>" id="dataporten_redirect_uri" />
 			</td>
 		</tr>
 		<tr>

@@ -11,8 +11,6 @@ License: GPL2
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-define('WP_DEBUG', true);
-session_start();
 
 class Dataporten_oAuth {
 
@@ -90,9 +88,9 @@ class Dataporten_oAuth {
 		add_action('show_user_profile', array($this, 'dataporten_linked_account'));
 		add_action('wp_logout', array($this, 'dataporten_end_logout'));
 		add_action('login_message', array($this, 'dataporten_login_screen'));
-		add_action('wp_footer', array($this, 'dataporten_push_login_messages'));
-		add_filter('admin_footer', array($this, 'dataporten_push_login_messages'));
-		add_filter('login_footer', array($this, 'dataporten_push_login_messages'));
+		//add_action('wp_footer', array($this, 'dataporten_push_login_messages'));
+		//add_filter('admin_footer', array($this, 'dataporten_push_login_messages'));
+		//add_filter('login_footer', array($this, 'dataporten_push_login_messages'));
 		add_filter('comment_form_defaults', array($this, 'dataporten_custom_comments'));
 		add_action('dataporten_clear_states', array($this, 'dataporten_clear_states_cron'));
 	}
@@ -108,7 +106,7 @@ class Dataporten_oAuth {
 		global $current_user;
 		global $wpdb;
 
-		get_currentuserinfo();
+		wp_get_current_user();
 
 		$user_id 		= $current_user->ID;
 		$usermeta_table = $wpdb->usermeta;
@@ -116,10 +114,20 @@ class Dataporten_oAuth {
 		$query_result   = $wpdb->get_results($query_string, ARRAY_A);
 		$profile 		= true;
 
-		if(isset($_GET["unlinked"]) && $_GET['unlinked'] == 1) {
-			add_action( 'admin_notices', $this->dataporten_unlinked_notice("Success! Your account is now unlinked with dataporten.", "updated") );
-		} else if(isset($_GET["unlinked"]) && $_GET['unlinked'] == 0) {
-			add_action( 'admin_notices', $this->dataporten_unlinked_notice("Oops.. Something went wrong when trying to unlink your account. Are you sure you're you?", "error") );
+		if(isset($_GET['unlinked'])) {
+			if($_GET['unlinked'] == 1) {
+				$this->dataporten_unlinked_notice("Success! Your account is now unlinked with dataporten.", "updated");
+			} else if($_GET['unlinked'] == 0) {
+				$this->dataporten_unlinked_notice("Oops.. Something went wrong when trying to unlink your account. Are you sure you're you?", "error");
+			} 
+		} else if(isset($_GET['linked'])) {
+			if($_GET['linked'] == 1) {
+				$this->dataporten_unlinked_notice("Success! Your account is now linked with dataporten.", "updated");
+			} else if($_GET['linked'] == 0) {
+				$this->dataporten_unlinked_notice("Oops.. Something went wrong when trying to link your account. Are you sure you're you?", "error");
+			} else if($_GET['linked'] == 2) {
+				$this->dataporten_unlinked_notice("That account is already linked on this site.", "error");
+			}
 		}
 
 		//
@@ -148,7 +156,7 @@ class Dataporten_oAuth {
 				'disconnect' => $query_results["umeta_id"],
 			), site_url());
 			
-			$local_time = strtotime("-" . $_COOKIE['gmtoffset'] . ' hours', $time_linked);
+			//$local_time = strtotime("-" . $_COOKIE['gmtoffset'] . ' hours', $time_linked);
 
 			$button_params = array(
 				'text' => 'Unlink Dataporten',
@@ -160,21 +168,18 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Logs the user out of wordpress, deletes the _SESSION variables, and redirects the 
+	//	Logs the user out of wordpress, and redirects the 
 	//  user to another page.
 	//
 	//
 
 	function dataporten_end_logout() {
-		$_SESSION['dataporten']['result'] = 'Logged out successfully.';
 		if (is_user_logged_in()) {
 			$last_url = $_SERVER['HTTP_REFERER'];
 		} else {
 			$last_url = strtok($_SERVER['HTTP_REFERER'], '?');
 		}
 
-		$_SESSION['dataporten']['last_url'] = "";
-		session_destroy();
 		$redirect_method = get_option("dataporten_login_redirect");
 		$redirect_url    = "";
 
@@ -219,7 +224,7 @@ class Dataporten_oAuth {
 			global $current_user;
 			global $wpdb;
 
-			get_currentuserinfo();
+			wp_get_current_user();
 			$dataporten_identity_row = $_GET['disconnect'];
 			$user_id = $current_user->ID;
 			$usermeta_table = $wpdb->usermeta;
@@ -259,6 +264,10 @@ class Dataporten_oAuth {
 				'href'  => $link,
 				);
 			$profile = false;
+			if(isset($_GET['errors'])) {
+				if($_GET['errors'] == 5) $this->dataporten_push_error_message("Could not complete the login. Please contact an admin or try again later.");
+				else if($_GET['errors'] == 6) $this->dataporten_push_error_message("Sorry, user registration is disabled at this time. Your account could not be registered");
+			}
 			include 'login-view.php';
 		}
 	}
@@ -270,7 +279,7 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_unlinked_notice($msg, $type) {
-		echo '<div class="' . $type . ' notice">';
+		echo '<div class="' . $type . ' notice is-dismissible">';
     	echo '<p>' . $msg . '</p>';
 		echo '</div>';
 	}
@@ -340,6 +349,12 @@ class Dataporten_oAuth {
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $sql );
 	}
+
+	//
+	//
+	//	Initiates admin
+	//
+	//
 
 	function dataporten_activate_admin() {
 		$this->define_environment();
@@ -451,9 +466,8 @@ class Dataporten_oAuth {
 	function dataporten_qvar_triggers($vars) {
 		$vars[] = 'connect';
 		$vars[] = 'code';
-		//$vars[] = 'error_description';
-		//$vars[] = 'error_message';
 		$vars[] = 'disconnect';
+		$vars[] = 'errors';
 		return $vars;
 	}
 
@@ -464,23 +478,39 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_qvar_handlers() {
-		include 'dataporten_oauth_login.php';
-
-		$login_obj = new Dataporten_oAuth_login($this);
 		if (get_query_var('connect')) {
 			if(!isset($_GET['link_nonce']) || !wp_verify_nonce($_GET['link_nonce'], 'link_account')) {
-				$this->dataporten_end_login("Nonce not matching. Are you sure you clicked a link from this page?", -1, "foo");
+				$this->dataporten_end_login("?errors=1", -1, "foo");
 			} else {
+				include 'dataporten_oauth_login.php';
+				$login_obj = new Dataporten_oAuth_login($this);
 				$login_obj->pre_auth();
 			}
 
 		} elseif (get_query_var('code')) {
-
+			include 'dataporten_oauth_login.php';
+			$login_obj = new Dataporten_oAuth_login($this);
 			$login_obj->post_auth();
 
 		} else if(get_query_var('disconnect')) {
 			$this->dataporten_unlink_account();
-		} 
+		} else if(get_query_var('errors')) {
+			$this->dataporten_push_error($_GET['errors']);
+		}
+	}
+
+	private function dataporten_push_error($error_number) {
+		switch($error_number) {
+			case 4: 					//Error with flow
+				$this->dataporten_push_error_message("Something went went wrong with the login-flow. Please try again, or contact an administrator.");
+				break;
+			case 1:						//Nonce not matching
+				$this->dataporten_push_error_message("Nonces' doesn't match. Are you sure you clicked a link from this page?");
+				break;
+			case 2:						//General error
+				$this->dataporten_push_error_message("Something went wrong. Please try again, or contact an administrator");
+				break;
+		}
 	}
 
 	//
@@ -513,7 +543,7 @@ class Dataporten_oAuth {
 			$this->dataporten_end_login("Logged in successfully!", 0, $this->oauth_identity["url"]);
 		} else if (is_user_logged_in()) {
 			global $current_user;
-			get_currentuserinfo();
+			wp_get_current_user();
 
 			$user_id = $current_user->ID;
 
@@ -523,14 +553,14 @@ class Dataporten_oAuth {
 				$this->dataporten_check_authority($this->oauth_identity);
 			}
 
-			$this->dataporten_end_login("Your account was linked successfully with dataporten.", 1, $this->oauth_identity["url"]);
+			$this->dataporten_end_login("?linked=1", 1, $this->oauth_identity["url"]);
 		} else if (!is_user_logged_in() && !$matched_user) {
 			include 'dataporten_oauth_register.php';
 
 			$register = new Dataporten_oAuth_register($this, $oauth_identity);
 			$register->dataporten_create_user();
 		} else {
-			$this->dataporten_end_login("Sorry, we couldn't log you in. The login flow terminated in an unexpected way. Please notify the admin or try again later.", -1, $this->oauth_identity["url"]);
+			$this->dataporten_end_login("?errors=4", -1, $this->oauth_identity["url"]);
 		}
 
 	}
@@ -583,8 +613,7 @@ class Dataporten_oAuth {
 			if(!$matched_user){
 				add_user_meta($user_id, 'dataporten_identity', 'dataporten|' . $oauth_identity['id'] . '|' . time());
 			} else {
-				$_SESSION['dataporten']['result'] = "Someone has already linked that account.";
-				wp_safe_redirect(site_url());
+				wp_safe_redirect(get_edit_user_link() . "?linked=2");
 				die();
 			}
 		}
@@ -592,22 +621,20 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//  Ends the login "session", and redirects the user to a predetermined location, depending on
+	//  Redirects the user to a predetermined location, depending on
 	//  the $state parameter.	
 	//
 	//
 
 	function dataporten_end_login($message, $state, $url) {
 		$last_url = $url;
-		$_SESSION['dataporten']['result'] = $message;
 		switch($state){
 			case -1:
-				$redirect_url = wp_login_url();
+				$redirect_url = wp_login_url() . $message;
 				break;
 			case 1:
 				$redirect_url = get_edit_user_link();
-				wp_safe_redirect($redirect_url);
-				$this->dataporten_unlinked_notice($msg, "updated");
+				wp_safe_redirect($redirect_url . $message);
 				die();
 				break;
 			case 0:
@@ -641,14 +668,11 @@ class Dataporten_oAuth {
 	//
 	//
 
-	function dataporten_push_login_messages() {
-		$result = $_SESSION['dataporten']['result'];
-		unset($_SESSION['dataporten']['result']);
-		if($result) {
-			echo "<div id='dataporten_outer'>";
-			echo "<div id='dataporten_result'>" . $result . "</div>";
-			echo "</div>";
-		}
+	private function dataporten_push_error_message($message) {
+
+		echo "<div id='dataporten_outer'>";
+		echo "<div id='dataporten_result'>" . $message . "</div>";
+		echo "</div>";
 	}
 
 	//
@@ -666,7 +690,6 @@ class Dataporten_oAuth {
 			define("DATAPORTEN_CLIENTID", getenv('DATAPORTEN_CLIENTID'));
 			define("DATAPORTEN_CLIENTSECRET", getenv('DATAPORTEN_CLIENTSECRET'));
 			define("DATAPORTEN_SCOPES", getenv('DATAPORTEN_SCOPES'));
-
 			$full_uri = getenv('TLS') == "true" ? 'https://' . getenv('HOST') : 'http://' . getenv('HOST');
 			define('DATAPORTEN_REDIRECTURI', $full_uri);
 

@@ -21,9 +21,8 @@ class Dataporten_oAuth_register {
 
 	public function __construct($dataporten_main, $oauth_identity) {
 		if(!get_option("users_can_register")) {
-			$_SESSION['dataporten']['result'] = "Sorry, user registration is disabled at this time. Your account could not be registered";
 
-			header("Location: " . $_SESSION['dataporten']['last_url']);
+			header("Location: " . wp_login_url() . "?errors=6");
 			exit;
 		}
 		$this->dataporten_main = $dataporten_main;
@@ -58,8 +57,8 @@ class Dataporten_oAuth_register {
 		$user_id = wp_create_user($this->username, $this->password, $this->username);
 
 		if (is_wp_error($user_id)) {
-			$_SESSION['dataporten']['result'] = $user_id->get_error_message();
-			header("Location: " . site_url());
+
+			header("Location: " . site_url() . "?errors=2");
 			exit;
 		}
 
@@ -90,12 +89,8 @@ class Dataporten_oAuth_register {
 		}
 		$update_role_result = wp_update_user(array('ID' => $user_id, 'role' => $this->role));
 
-		if ($update_username_result == false || $update_nickname_result == false) {
-			$_SESSION["dataporten"]["result"] = "Could not rename the username during registration. Please contact an admin or try again later.";
-			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
-		} elseif ($update_role_result == false) {
-			$_SESSION["dataporten"]["result"] = "Could not assign default user role during registration. Please contact an admin or try again later.";
-			header("Location: " . $_SESSION["dataporten"]["last_url"]); exit;
+		if ($update_username_result == false || $update_nickname_result == false || $update_role_result == false) {
+			header("Location: " . wp_login_url() . "?errors=5"); exit;
 		} else {
 			$this->dataporten_main->dataporten_link_account($user_id, $this->oauth_identity);
 
@@ -106,7 +101,7 @@ class Dataporten_oAuth_register {
 			);
 
 			$user = wp_signon($credentials, false);
-			$this->dataporten_main->dataporten_end_login("You have been registered successfully!", 0);
+			$this->dataporten_main->dataporten_end_login("", 0);
 		}
 	}
 }

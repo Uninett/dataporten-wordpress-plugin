@@ -13,5 +13,7 @@ RUN sed -i '$ d' /entrypoint.sh
 RUN echo 'wp plugin activate dataporten_oauth --allow-root' >> /entrypoint.sh
 RUN echo 'exec "$@"' >> /entrypoint.sh
 
+VOLUME volume/ /var/www/
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["apache2-foreground"]
