@@ -7,10 +7,16 @@ RUN cd /tmp && chmod +x wp-cli.phar \
   && mv wp-cli.phar /usr/local/bin/wp
 
 
-COPY dataporten_oauth /usr/src/wordpress/wp-content/plugins/dataporten_oauth
-RUN chown -R www-data:www-data /usr/src/wordpress/wp-content/plugins/dataporten_oauth
+COPY plugins.tar.gz /usr/src/wordpress/wp-content/plugins.tar.gz
+COPY feidernd /usr/src/wordpress/wp-content/themes/feidernd
+RUN tar xzvf /usr/src/wordpress/wp-content/plugins.tar.gz
+RUN rm /usr/src/wordpress/wp-content/plugins.tar.gz
+#RUN chown -R www-data:www-data /usr/src/wordpress/wp-content/plugins/dataporten_oauth
 RUN sed -i '$ d' /entrypoint.sh
-RUN echo 'wp plugin activate dataporten_oauth --allow-root' >> /entrypoint.sh
+RUN echo 'wp plugin install --activate dataporten-oauth --allow-root' >> /entrypoint.sh
+RUN echo 'wp theme install twentyten --allow-root' >> /entrypoint.sh
+
+
 RUN echo 'exec "$@"' >> /entrypoint.sh
 
 VOLUME volume/ /var/www/

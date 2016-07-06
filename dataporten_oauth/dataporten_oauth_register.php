@@ -1,7 +1,7 @@
 <?php
 
 class Dataporten_oAuth_register {
-	
+
 	private $username;
 	private $password;
 	private $email;
@@ -12,9 +12,9 @@ class Dataporten_oAuth_register {
 
 	//
 	//
-	//	Construct function for register class. Tells the user if the registration 
-	//	is disabled at the current account, and redirecting the user. Sets all 
-	//	variables, and generates password. Creates nickname from email, since the 
+	//	Construct function for register class. Tells the user if the registration
+	//	is disabled at the current account, and redirecting the user. Sets all
+	//	variables, and generates password. Creates nickname from email, since the
 	//	username is set to be id of user. This can be changed later.
 	//
 	//
@@ -42,10 +42,10 @@ class Dataporten_oAuth_register {
 
 	//
 	//
-	//	Takes in the groups priority from dataporten_rolesets and creates user. 
-	//	Sets username, display name and all required fields of an account. Sets 
-	//	the role-name to default_role. If dataporten_default_role_enabled is enabled, 
-	//	it checks the intended role of the user. Then links the dataporten account 
+	//	Takes in the groups priority from dataporten_rolesets and creates user.
+	//	Sets username, display name and all required fields of an account. Sets
+	//	the role-name to default_role. If dataporten_default_role_enabled is enabled,
+	//	it checks the intended role of the user. Then links the dataporten account
 	//	with the wordpress account.
 	//
 	//
@@ -63,19 +63,19 @@ class Dataporten_oAuth_register {
 		}
 
 		$update_username_result = $wpdb->update($wpdb->users, array(
-			'user_login' 	=> $this->username, 
+			'user_login' 	=> $this->username,
 			'user_nicename' => $this->username,
-			'display_name' 	=> $this->nickname, 
+			'display_name' 	=> $this->nickname,
 			'user_email'    => $this->email,
 		), array('ID' => $user_id));
 
 		$update_nickname_result = update_user_meta($user_id, "nickname", $this->nickname);
-		
+
 		$name 		 = get_option('default_role');
 		if(get_option('dataporten_default_role_enabled')) {
 			$tmp_results = json_decode(get_option("dataporten_rolesets"), true);
 			$highest 	 = -1;
-			
+
 
 			foreach($this->groups as $tmp) {
 				$curr_index = array_search($tmp["id"], array_keys($tmp_results));
@@ -101,7 +101,7 @@ class Dataporten_oAuth_register {
 			);
 
 			$user = wp_signon($credentials, false);
-			$this->dataporten_main->dataporten_end_login("", 0);
+			$this->dataporten_main->dataporten_end_login("", 0, site_url());
 		}
 	}
 }

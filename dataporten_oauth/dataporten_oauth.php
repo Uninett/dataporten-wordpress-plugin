@@ -3,7 +3,7 @@
 /*
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
-Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0. 
+Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0.
 Version: 0.4
 Author: UNINETT
 Author URI: https://uninett.no
@@ -16,7 +16,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Class initialization. Defines plugin version, and a singleton class pattern, 
+	//	Class initialization. Defines plugin version, and a singleton class pattern,
 	//  ensuring there is only one instance of the class globally.
 	//
 	//
@@ -97,7 +97,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Function for populating the profile settings view with whether the account has 
+	//	Function for populating the profile settings view with whether the account has
 	//  been linked with dataporten or not. Spouts a notice if the account is updated.
 	//
 	//
@@ -119,7 +119,7 @@ class Dataporten_oAuth {
 				$this->dataporten_unlinked_notice("Success! Your account is now unlinked with dataporten.", "updated");
 			} else if($_GET['unlinked'] == 0) {
 				$this->dataporten_unlinked_notice("Oops.. Something went wrong when trying to unlink your account. Are you sure you're you?", "error");
-			} 
+			}
 		} else if(isset($_GET['linked'])) {
 			if($_GET['linked'] == 1) {
 				$this->dataporten_unlinked_notice("Success! Your account is now linked with dataporten.", "updated");
@@ -131,7 +131,7 @@ class Dataporten_oAuth {
 		}
 
 		//
-		//	Checks whether the account has been linked or not. If not, it adds a 
+		//	Checks whether the account has been linked or not. If not, it adds a
 		//  button for linking the account. If it has, it adds a button for unlinking the account.
 		//
 
@@ -145,17 +145,17 @@ class Dataporten_oAuth {
 
 			include 'login-view.php';
 		} else {
-			
+
 			$query_results		 	   = array_shift($query_result);
 			$dataporten_identity_parts = explode('|', $query_results["meta_value"]);
 			$oauth_provider			   = $dataporten_identity_parts[0];
 			$oauth_id 				   = $dataporten_identity_parts[1]; // keep this private, don't send to client
 			$time_linked 			   = $dataporten_identity_parts[2];
-			
+
 			$query = add_query_arg(array(
 				'disconnect' => $query_results["umeta_id"],
 			), site_url());
-			
+
 			//$local_time = strtotime("-" . $_COOKIE['gmtoffset'] . ' hours', $time_linked);
 
 			$button_params = array(
@@ -168,7 +168,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Logs the user out of wordpress, and redirects the 
+	//	Logs the user out of wordpress, and redirects the
 	//  user to another page.
 	//
 	//
@@ -197,7 +197,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Injects the stylesheet and JavaScript to the page. Makes hide_login_form available 
+	//	Injects the stylesheet and JavaScript to the page. Makes hide_login_form available
 	//  for read for the JavaScript, and enables the native loginscreen to be hidden.
 	//
 	//
@@ -213,8 +213,8 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Unlinks an user-account from Dataporten where the users dataporten id is found, along 
-	//  with the row of the data for extra security. Redirects the user to another page 
+	//	Unlinks an user-account from Dataporten where the users dataporten id is found, along
+	//  with the row of the data for extra security. Redirects the user to another page
 	//  depending on it completing or not.
 	//
 	//
@@ -237,12 +237,12 @@ class Dataporten_oAuth {
 			}
 		} else {
 			header("Location: " . site_url() . "/wp-admin/profile.php?unlinked=0");
-		}	
+		}
 	}
 
 	//
 	//
-	//	Manipulates the login screen of Wordpress, adding a button if dataporten has been enabled. Includes 
+	//	Manipulates the login screen of Wordpress, adding a button if dataporten has been enabled. Includes
 	//  login-view.php as the button view. Text of button changes depending on whether the user is logged in or not.
 	//
 	//
@@ -286,7 +286,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Function being run when the plugin is activated for the first time. Populates the database with default 
+	//	Function being run when the plugin is activated for the first time. Populates the database with default
 	//  options.
 	//
 	//
@@ -340,8 +340,8 @@ class Dataporten_oAuth {
 
 		$sql = "CREATE TABLE $table_name (
 			id int(11) NULL AUTO_INCREMENT,
-			state text NOT NULL UNIQUE,
-			url text DEFAULT '' NOT NULL,
+			state varchar(190) NOT NULL UNIQUE,
+			url varchar(255) DEFAULT '' NOT NULL,
 			added TIMESTAMP NOT NULL,
 			UNIQUE KEY id (id)
 		) $charset_collate";
@@ -372,8 +372,8 @@ class Dataporten_oAuth {
 
 	function dataporten_settings_link($links) {
 		$settings_link = "<a href='options-general.php?page=Dataporten-oAuth'>Settings</a>"; // CASE SeNsItIvE filename!
-		array_unshift($links, $settings_link); 
-		return $links; 
+		array_unshift($links, $settings_link);
+		return $links;
 	}
 
 	//
@@ -385,13 +385,13 @@ class Dataporten_oAuth {
 	function dataporten_update() {
 		$plugin_version    = Dataporten_oAuth::PLUGIN_VERSION;
 		$installed_version = get_option("dataporten_plugin_version");
-		
+
 		if (!$installed_version || $installed_version <= 0 || $installed_version != $plugin_version) {
-			
+
 			$this->dataporten_update_missing_db();
 			update_option("dataporten_plugin_version", $plugin_version);
 			add_action('admin_notices', array($this, 'dataporten_update_notice'));
-		
+
 		}
 	}
 
@@ -515,10 +515,10 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Function for loggin in the user. Takes in a variable with the dataporten users id, groups and email. 
-	//  If the user is matched in the database, but not logged in, we login the user. If the user is logged in 
+	//	Function for loggin in the user. Takes in a variable with the dataporten users id, groups and email.
+	//  If the user is matched in the database, but not logged in, we login the user. If the user is logged in
 	//  (can be matched here also, so we have to check whether or not there is a match later on. This to prevent
-	//  two or more accounts be linked with the same account), he/she is then linked with the desired Dataporten 
+	//  two or more accounts be linked with the same account), he/she is then linked with the desired Dataporten
 	//  account. If the user isn't logged in, nor there is a match in the database, we create a new user.
 	//	Always checks the users role if the dataporten_default_role_enabled is enabled. This to check whether the
 	//	environment variables have been changed, and the user is supposed to have a different role.
@@ -569,7 +569,7 @@ class Dataporten_oAuth {
 	//
 	//	Updates the current users role depending on the rolesets defined in the database.
 	//  The occurence with the highest index, is the one that is kept. This means that
-	//  you have to have this in mind when defining the environment variables.	
+	//  you have to have this in mind when defining the environment variables.
 	//
 	//
 
@@ -599,8 +599,8 @@ class Dataporten_oAuth {
 	//
 	//
 	//	Tries to link account with dataporten, but first checks if the account already
-	//  are linked. If there isn't an occurence of the account in the database, it will 
-	//	link with the current account. If the account already exists, the user will be 
+	//  are linked. If there isn't an occurence of the account in the database, it will
+	//	link with the current account. If the account already exists, the user will be
 	//	informed.
 	//
 	//
@@ -622,7 +622,7 @@ class Dataporten_oAuth {
 	//
 	//
 	//  Redirects the user to a predetermined location, depending on
-	//  the $state parameter.	
+	//  the $state parameter.
 	//
 	//
 
@@ -647,7 +647,7 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Finds a match of the user, to see if the user already exists in the database.	
+	//	Finds a match of the user, to see if the user already exists in the database.
 	//
 	//
 
@@ -677,11 +677,11 @@ class Dataporten_oAuth {
 
 	//
 	//
-	//	Defines the environment variables. If there is anything different from the 
-	//  environment variables defined in env.list, the already existing ones in the 
-	//  database is replaced. It also checks whether the environment variables are 
-	//  defined, making it so the plugin can be used standalone, without docker and 
-	//  environment variables.	
+	//	Defines the environment variables. If there is anything different from the
+	//  environment variables defined in env.list, the already existing ones in the
+	//  database is replaced. It also checks whether the environment variables are
+	//  defined, making it so the plugin can be used standalone, without docker and
+	//  environment variables.
 	//
 	//
 
@@ -719,7 +719,7 @@ class Dataporten_oAuth {
 		if( getenv('DATAPORTEN_DEFAULT_ROLE_ENABLED')) {
 			define('DATAPORTEN_DEFAULT_ROLE_ENABLED', getenv('DATAPORTEN_DEFAULT_ROLE_ENABLED'));
 
-			$this->settings['dataporten_default_role_enabled'] = DATAPORTEN_DEFAULT_ROLE_ENABLED; 
+			$this->settings['dataporten_default_role_enabled'] = DATAPORTEN_DEFAULT_ROLE_ENABLED;
 
 			if(get_option('dataporten_default_role_enabled') != getenv('DATAPORTEN_DEFAULT_ROLE_ENABLED')){
 				update_option('dataporten_default_role_enabled', $this->settings['dataporten_default_role_enabled']);
@@ -741,14 +741,14 @@ class Dataporten_oAuth {
 			if(!is_user_logged_in()) {
 				$text = "Login with Dataporten";
 				$link = $site_url . "?connect=dataporten&redirect_to=http://" . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
+				$button_params = array(
+					'text'  => $text,
+					'class' => 'login-page-button',
+					'href'  => $link,
+					);
+				$profile = false;
+				include 'login-view.php';
 			}
-			$button_params = array(
-				'text'  => $text,
-				'class' => 'login-page-button',
-				'href'  => $link,
-				);
-			$profile = false;
-			include 'login-view.php';
 		}
 	}
 }

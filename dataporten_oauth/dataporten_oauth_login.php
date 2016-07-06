@@ -1,7 +1,7 @@
 <?php
 
 class Dataporten_oAuth_login {
-	
+
 	private $redirect_url;
 	private $http_util;
 	private $client_enabled;
@@ -20,8 +20,8 @@ class Dataporten_oAuth_login {
 
 	//
 	//
-	//	Construct function for login class. Takes in the dataporten main 
-	//	variables for easier access of its functions. 
+	//	Construct function for login class. Takes in the dataporten main
+	//	variables for easier access of its functions.
 	//
 	//
 
@@ -35,7 +35,7 @@ class Dataporten_oAuth_login {
 		$this->redirect_uri    = get_option('dataporten_oauth_redirect_uri');
 		$this->scope 		   = get_option('dataporten_oauth_clientscopes');
 
-		
+
 		if(!isset($_GET['redirect_to']) && isset($_SERVER['HTTP_REFERER'])) {
 			$this->redirect_url = strtok($_SERVER['HTTP_REFERER'], '?');
 		} else if(isset($_GET['redirect_to'])){
@@ -43,7 +43,7 @@ class Dataporten_oAuth_login {
 		}
 
 		if($this->redirect_url != "" && strpos($this->redirect_url, 'wp-login.php') === false) $this->url = $this->redirect_url;
-	
+
 	}
 
 	//
@@ -58,7 +58,7 @@ class Dataporten_oAuth_login {
 
 	//
 	//
-	//	Setup after authentication. Gets authentication token, and logs in the 
+	//	Setup after authentication. Gets authentication token, and logs in the
 	//	user depending on the identity of the user. Checks whether the state gotten from
 	//	the oAuth2.0 server is the same saved in the database. If it is, it deletes the
 	//	entry in the database, fetches the saved url from the state variable, and adds
@@ -93,8 +93,8 @@ class Dataporten_oAuth_login {
 
 	//
 	//
-	//	Function for getting oAuth-token from dataporten. Calls the create_curl for 
-	//	easier creation of curl-variable. Defines the accesstoken, expires in and expires at 
+	//	Function for getting oAuth-token from dataporten. Calls the create_curl for
+	//	easier creation of curl-variable. Defines the accesstoken, expires in and expires at
 	//	When token is fetched.
 	//
 	//
@@ -117,7 +117,7 @@ class Dataporten_oAuth_login {
 		$access_token = $result_obj['access_token'];
 		$expires_in   = $result_obj['expires_in'];
 		$expires_at   = time() + $expires_in;
-		
+
 		if (!$access_token || !$expires_in) {
 			header("Location: " . wp_login_url() . "?errors=5"); exit;
 
@@ -185,7 +185,7 @@ class Dataporten_oAuth_login {
 		$this->insert_state($state);
 
 		$url = Dataporten_oAuth_login::URL_AUTH . http_build_query($params);
-		
+
 		header("Location: $url");
 		exit;
 	}
@@ -202,13 +202,13 @@ class Dataporten_oAuth_login {
 		$table_name = $wpdb->prefix . 'dataporten_oauth';
 		$url 		= $this->url ? $this->url : "";
 
-		$wpdb->insert( 
-			$table_name, 
-			array( 
-				'state' => $state, 
+		$wpdb->insert(
+			$table_name,
+			array(
+				'state' => $state,
 				'url' 	=> $url,
-				'added' => date("Y-m-d H:i:s"), 
-			) 
+				'added' => date("Y-m-d H:i:s"),
+			)
 		);
 	}
 
