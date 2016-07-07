@@ -3,7 +3,7 @@ Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
 Tested up to: 4.5.2
-Stable tag: 0.9
+Stable tag: 1.3
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,18 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 1.3 =
+* Hiding login button if comments are closed.
+
+= 1.2 =
+* Added Tag
+
+= 1.1 =
+* Fixed error with nonce not being added in comments
+
+= 1.0 =
+* Added nonces to comment form
 
 = 0.9 =
 * Removed login-button from comment-form if user is logged in
