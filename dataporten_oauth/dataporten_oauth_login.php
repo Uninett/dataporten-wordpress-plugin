@@ -145,6 +145,28 @@ class Dataporten_oAuth_login {
 		$result 	= curl_exec($this->create_curl($url, array('Authorization: Bearer ' . $this->access_token), false));
 		$result_obj = json_decode($result, true);
 		$result_grp = array();
+		$userid 	= "";
+		$email 		= "";
+		$first_name 		= "";
+		$last_name 			= "";
+
+		if(array_key_exists("user", $result_obj)) {
+			if(array_key_exists("userid", $result_obj["user"])) $userid = $result_obj["user"]["userid"];
+			if(array_key_exists("email", $result_obj["user"])) $email = $result_obj["user"]["email"];
+			if(array_key_exists("name", $result_obj["user"])){
+				$full_name = explode(" ", $result_obj["user"]["name"], 2);
+				$first_name = $full_name[0];
+				$last_name = $full_name[1];
+			}
+		} else {
+			if(array_key_exists("userid", $result_obj)) $userid = $result_obj["userid"];
+			if(array_key_exists("email", $result_obj)) $email = $result_obj["email"];
+			if(array_key_exists("name", $result_obj)){
+				$full_name = explode(" ", $result_obj["name"], 2);
+				$first_name = $full_name[0];
+				$last_name = $full_name[1];
+			}
+		}
 
 		if(get_option('dataporten_default_role_enabled')) {
 			$url_params = http_build_query($params);
@@ -155,8 +177,10 @@ class Dataporten_oAuth_login {
 
 		$oauth_identity = array(
 			'provider' => 'dataporten',
-			'id' 	   => $result_obj['user']['userid'],
-			'email'    => $result_obj['user']['email'],
+			'id' 	   => $userid,
+			'email'    => $email,
+			'firstname'=> $first_name,
+			'lastname' => $last_name,
 			'groups'   => $result_grp,
 		);
 

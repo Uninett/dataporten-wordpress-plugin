@@ -3,7 +3,7 @@ Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
 Tested up to: 4.5.3
-Stable tag: 1.8
+Stable tag: 2.1
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,8 @@ Authentication plugin for oAuth2.0 with UNINETTS Dataporten.
 This plugin enables login with Dataporten, UNINETTS oAuth2.0 platform. The plugin works both with and without Docker. When used with docker, environment variables for client_id, client_secret, redirect_uri and much more can be used.
 
 The plugin enables new and existing users on a wordpress blog to be automaticly assigned to a role, fetched from an array of defined roles decided from user-groups on Dataporten.
+
+This plugin needs php curl to work!
 
 == Installation ==
 
@@ -39,6 +41,12 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 2.1 =
+* Added some debugging
+
+= 2.0 =
+* Fixed better handling for varying scopes from dataporten, and added firstname + lastname in database from dataporten.
 
 = 1.8 =
 * Fix for http/https

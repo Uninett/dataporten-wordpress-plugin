@@ -9,6 +9,8 @@ class Dataporten_oAuth_register {
 	private $dataporten_main;
 	private $oauth_identity;
 	private $role;
+	private $firstname;
+	private $lastname;
 
 	//
 	//
@@ -20,7 +22,7 @@ class Dataporten_oAuth_register {
 	//
 
 	public function __construct($dataporten_main, $oauth_identity) {
-		if(!get_option("users_can_register") && !get_option("dataporten_only")) {
+		if(!get_option("users_can_register") && get_option("dataporten_only") != 1) {
 
 			header("Location: " . wp_login_url() . "?errors=6");
 			exit;
@@ -32,6 +34,8 @@ class Dataporten_oAuth_register {
 			$this->password = wp_generate_password();
 			$this->email    = $oauth_identity['email'];
 			$this->nickname = explode('@', $this->email)[0];
+			$this->firstname = $oauth_identity['firstname'];
+			$this->lastname = $oauth_identity['lastname'];
 			$this->groups 	= $oauth_identity["groups"];
 		} else {
 			$this->username = $_POST['identity'];
@@ -58,6 +62,11 @@ class Dataporten_oAuth_register {
 
 		if (is_wp_error($user_id)) {
 
+			if(defined('WP_DEBUG') && WP_DEBUG == true) {
+				error_log("Username " . $this->username);
+				error_log($user_id->get_error_message());
+			}
+
 			header("Location: " . site_url() . "?errors=2");
 			exit;
 		}
@@ -70,21 +79,23 @@ class Dataporten_oAuth_register {
 		), array('ID' => $user_id));
 
 		$update_nickname_result = update_user_meta($user_id, "nickname", $this->nickname);
+		$update_nickname_result = update_user_meta($user_id, "first_name", $this->firstname);
+		$update_nickname_result = update_user_meta($user_id, "last_name", $this->lastname);
+
 
 		$name 		 = get_option('default_role');
 		if(get_option('dataporten_default_role_enabled')) {
 			$tmp_results = json_decode(get_option("dataporten_rolesets"), true);
 			$highest 	 = -1;
 
-
 			foreach($this->groups as $tmp) {
+				if(!is_array($tmp)) break;
 				$curr_index = array_search($tmp["id"], array_keys($tmp_results));
 				if($curr_index > $highest) {
 					$highest = $curr_index;
 					$name    = $tmp_results[$tmp["id"]];
 				}
 			}
-
 			$this->role = $name;
 		}
 		$update_role_result = wp_update_user(array('ID' => $user_id, 'role' => $this->role));
