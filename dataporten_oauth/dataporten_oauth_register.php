@@ -62,10 +62,10 @@ class Dataporten_oAuth_register {
 
 		if (is_wp_error($user_id)) {
 
-			if(defined('WP_DEBUG') && WP_DEBUG == true) {
+			//if(defined('WP_DEBUG') && WP_DEBUG == true) {
 				error_log("Username " . $this->username);
 				error_log($user_id->get_error_message());
-			}
+			//}
 
 			header("Location: " . site_url() . "?errors=2");
 			exit;
