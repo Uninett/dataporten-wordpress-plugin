@@ -2,8 +2,8 @@
 Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
-Tested up to: 4.5.2
-Stable tag: 1.3
+Tested up to: 4.5.3
+Stable tag: 1.8
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,18 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 1.8 =
+* Fix for http/https
+
+= 1.7 =
+* Versioning..
+
+= 1.6 = 
+* Fixing minor versions
+
+= 1.4 =
+* Added option for enabling registering with dataporten even when user-registering is disabled.
 
 = 1.3 =
 * Hiding login button if comments are closed.

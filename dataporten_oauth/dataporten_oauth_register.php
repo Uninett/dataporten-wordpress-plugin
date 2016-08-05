@@ -20,7 +20,7 @@ class Dataporten_oAuth_register {
 	//
 
 	public function __construct($dataporten_main, $oauth_identity) {
-		if(!get_option("users_can_register")) {
+		if(!get_option("users_can_register") && !get_option("dataporten_only")) {
 
 			header("Location: " . wp_login_url() . "?errors=6");
 			exit;

@@ -2,6 +2,7 @@
 
 <h2>Dataporten-oAuth Settings</h2>
 <form method="post" action="options.php">
+
 	<?php
 
 		//
@@ -15,6 +16,14 @@
 	?>
 	<h3>General Settings</h3>
 	<table class="form-table">
+		<tr style='display:<?php echo (get_option('users_can_register')) ? "none" : "table-row"; ?>;'>
+			<th>
+				<label for="dataporten_only">Enable only Dataporten register</label>
+			</th>
+			<td>
+				<input type="checkbox" name="dataporten_only" value="1" id="dataporten_only" <?php checked(get_option("dataporten_only") == 1 && !get_option("users_can_register")); ?>/>
+			</td>
+		</tr>
 		<tr>
 			<th>
 				<label for="dataporten_hide_native_wp">Hide Native Wordpress Login</label>

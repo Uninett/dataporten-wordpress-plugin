@@ -10,7 +10,7 @@ RUN cd /tmp && chmod +x wp-cli.phar \
 COPY dataporten_oauth/ /usr/src/wordpress/wp-content/plugins/dataporten_oauth
 RUN chown -R www-data:www-data /usr/src/wordpress/wp-content/plugins/dataporten_oauth
 RUN sed -i '$ d' /entrypoint.sh
-RUN echo 'wp plugin activate dataporten_oauth --allow-root' >> /entrypoint.sh
+# RUN echo 'wp plugin activate dataporten_oauth --allow-root' >> /entrypoint.sh
 RUN echo 'exec "$@"' >> /entrypoint.sh
 
 VOLUME volume/ /var/www/
