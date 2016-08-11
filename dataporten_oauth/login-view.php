@@ -16,5 +16,5 @@
 <?php
 	} else {
 ?>
-	<a class="<?php echo $button_params['class']; ?>" href="<?php echo $button_params['href']; ?>"><?php echo $button_params["text"]; ?></a>
+	<a class="<?php echo $button_params['class']; ?>" id="<?php echo $button_params['id']; ?>" href="<?php echo $button_params['href']; ?>"><?php echo $button_params["text"]; ?></a>
 <?php } ?>

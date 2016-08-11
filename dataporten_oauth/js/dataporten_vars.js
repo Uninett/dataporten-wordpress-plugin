@@ -3,6 +3,7 @@
 		if(dataporten_variables.hide_login_form == 1 && window.location.pathname.indexOf("wp-login.php") > 0) {
 			try{
 				document.getElementById("loginform").style.display = "none";	//Hides login form if defined in the database. Should be a better way of doing this.
+				window.location.href=document.getElementById('dataporten-login-button').href;
 			} catch(e){}
 		}
 
