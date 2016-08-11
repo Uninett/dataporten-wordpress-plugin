@@ -4,7 +4,7 @@
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0.
-Version: 2.1
+Version: 2.3
 Author: UNINETT
 Author URI: https://uninett.no
 License: GPL2
@@ -21,7 +21,7 @@ class Dataporten_oAuth {
 	//
 	//
 
-	const PLUGIN_VERSION = "2.1";
+	const PLUGIN_VERSION = "2.3";
 
 	private static $instance;
 	private $oauth_identity;
@@ -652,11 +652,20 @@ class Dataporten_oAuth {
 	//
 
 	function dataporten_find_match_users($oauth_identity) {
+/*		global $wpdb;
+
+		$usermeta_table = $wpdb->usermeta;
+		$query_string   = "SELECT $usermeta_table.user_id FROM $usermeta_table WHERE $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.meta_value LIKE '%" . $oauth_identity['provider'] . "|" . $oauth_identity['id'] . "%'";
+		$query_result   = $wpdb->get_var($query_string);
+*/
 		global $wpdb;
 
 		$usermeta_table = $wpdb->usermeta;
 		$query_string   = "SELECT $usermeta_table.user_id FROM $usermeta_table WHERE $usermeta_table.meta_key = 'dataporten_identity' AND $usermeta_table.meta_value LIKE '%" . $oauth_identity['provider'] . "|" . $oauth_identity['id'] . "%'";
 		$query_result   = $wpdb->get_var($query_string);
+
+		//print_r($query_result);
+		//die();
 
 		$user = get_user_by('id', $query_result);
 		return $user;
@@ -740,7 +749,7 @@ class Dataporten_oAuth {
 			$site_url = get_bloginfo('url');
 			if(!is_user_logged_in()) {
 				$text = "Login with Dataporten";
-				$redirect_to = "&redirect_to=//" . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
+				$redirect_to = "&redirect_to=https://" . $_SERVER["HTTP_HOST"] . $_SERVER['REQUEST_URI'];
 				$link = wp_nonce_url($site_url . "?connect=dataporten" . $redirect_to, "link_account", "link_nonce");
 
 				$button_params = array(

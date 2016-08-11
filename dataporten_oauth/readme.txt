@@ -2,8 +2,8 @@
 Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
-Tested up to: 4.5.3
-Stable tag: 2.1
+Tested up to: 4.6
+Stable tag: 2.3
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -41,6 +41,12 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 2.3 =
+* Minor Versioning
+
+= 2.2 =
+* Fixed issue where email was mistaken as password
 
 = 2.1 =
 * Added some debugging

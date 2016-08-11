@@ -58,14 +58,14 @@ class Dataporten_oAuth_register {
 		global $wpdb;
 		$groups_priority = json_decode(get_option("dataporten_rolesets"), true);
 
-		$user_id = wp_create_user($this->username, $this->password, $this->username);
+		$user_id = wp_create_user($this->username, $this->password, $this->email);
 
 		if (is_wp_error($user_id)) {
 
-			if(defined('WP_DEBUG') && WP_DEBUG == true) {
+			//if(defined('WP_DEBUG') && WP_DEBUG == true) {
 				error_log("Username " . $this->username);
 				error_log($user_id->get_error_message());
-			}
+			//}
 
 			header("Location: " . site_url() . "?errors=2");
 			exit;
@@ -75,13 +75,13 @@ class Dataporten_oAuth_register {
 			'user_login' 	=> $this->username,
 			'user_nicename' => $this->username,
 			'display_name' 	=> $this->nickname,
-			'user_email'    => $this->email,
 		), array('ID' => $user_id));
 
 		$update_nickname_result = update_user_meta($user_id, "nickname", $this->nickname);
-		$update_nickname_result = update_user_meta($user_id, "first_name", $this->firstname);
-		$update_nickname_result = update_user_meta($user_id, "last_name", $this->lastname);
+		$update_firstname_result = update_user_meta($user_id, "first_name", $this->firstname);
+		$update_lastname_result = update_user_meta($user_id, "last_name", $this->lastname);
 
+		//$user_email = wp_update_user( array('ID' => $user_id, 'user_email' => $this->email ) );
 
 		$name 		 = get_option('default_role');
 		if(get_option('dataporten_default_role_enabled')) {
@@ -100,7 +100,8 @@ class Dataporten_oAuth_register {
 		}
 		$update_role_result = wp_update_user(array('ID' => $user_id, 'role' => $this->role));
 
-		if ($update_username_result == false || $update_nickname_result == false || $update_role_result == false) {
+		if ($update_username_result == false || $update_nickname_result == false || $update_role_result == false || $update_firstname_result == false || $update_lastname_result == false) {
+			
 			header("Location: " . wp_login_url() . "?errors=5"); exit;
 		} else {
 			$this->dataporten_main->dataporten_link_account($user_id, $this->oauth_identity);

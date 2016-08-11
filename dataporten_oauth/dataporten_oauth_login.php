@@ -87,7 +87,7 @@ class Dataporten_oAuth_login {
 			$identity["url"] = $states["0"]["url"];
 			$this->dataporten_main->dataporten_login_user($identity);
 		} else {
-			$this->dataporten_main->dataporten_end_login("?error=2", -1, "foo");
+			$this->dataporten_main->dataporten_end_login("?errors=2", -1, "foo");
 		}
 	}
 
