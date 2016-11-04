@@ -4,7 +4,7 @@
 Plugin Name: Dataporten-oAuth
 Plugin URI: http://github.com/uninett/dataporten-wordpress-plugin
 Description: A WordPress plugin that allows users to login or register by authenticating with an existing Dataporten accunt via OAuth 2.0.
-Version: 2.5
+Version: 3.0
 Author: UNINETT
 Author URI: https://uninett.no
 License: GPL2
@@ -21,7 +21,7 @@ class Dataporten_oAuth {
 	//
 	//
 
-	const PLUGIN_VERSION = "2.5";
+	const PLUGIN_VERSION = "3.0";
 
 	private static $instance;
 	private $oauth_identity;
@@ -529,20 +529,41 @@ class Dataporten_oAuth {
 	function dataporten_login_user($oauth_identity) {
 		$this->oauth_identity = $oauth_identity;
 
-		$matched_user = $this->dataporten_find_match_users($oauth_identity);
+        $matched_user = $this->dataporten_find_match_users($oauth_identity);
 
-		if ($matched_user && !is_user_logged_in()) {
-			$user_id = $matched_user->ID;
-			$user_login = $matched_user->user_login;
-			wp_set_current_user($user_id, $user_login);
-			wp_set_auth_cookie($user_id);
-			do_action('wp_login', $user_login, $matched_user);
+        if ($matched_user && !is_user_logged_in()) {
+            global $wpdb;
 
-			if(get_option('dataporten_default_role_enabled')) {
-				$this->dataporten_check_authority($this->oauth_identity);
-			}
-			$this->dataporten_end_login("Logged in successfully!", 0, $this->oauth_identity["url"]);
-		} else if (is_user_logged_in()) {
+            $user_id = $matched_user->ID;
+            $user_login = $matched_user->user_login;
+
+            if($matched_user->first_name != $oauth_identity['firstname']){
+                $update_firstname_result = update_user_meta($user_id, "first_name", $oauth_identity['firstname']);
+            }
+            if($matched_user->last_name != $oauth_identity['lastname']){
+                $update_lastname_result = update_user_meta($user_id, "last_name", $oauth_identity['lastname']);
+            }
+            if($matched_user->user_nicename != $oauth_identity['firstname'] . " " . $oauth_identity['lastname']){
+                $update_nickname_result = update_user_meta($user_id, "nickname", $oauth_identity['firstname'] . " " . $oauth_identity['lastname']);
+            }
+            if($matched_user->user_email != $oauth_identity['email']){
+                $display_name = $oauth_identity['firstname'] . " " . $oauth_identity['lastname'];
+                $update_username_result = $wpdb->update($wpdb->users, array(
+                    'user_email' => $oauth_identity['email'],
+                    'display_name'  => $display_name,
+                ), array('ID' => $user_id));
+            }
+
+            wp_set_current_user($user_id, $user_login);
+            wp_set_auth_cookie($user_id);
+            do_action('wp_login', $user_login, $matched_user);
+
+            if(get_option('dataporten_default_role_enabled')) {
+                $this->dataporten_check_authority($this->oauth_identity);
+            }
+            $this->dataporten_end_login("Logged in successfully!", 0, $this->oauth_identity["url"]);
+        } else if (is_user_logged_in()) {
+
 			global $current_user;
 			wp_get_current_user();
 

@@ -3,7 +3,7 @@ Contributors: kasperrt
 Tags: authentication,oauth,dataporten,oauth2.0,uninett
 Requires at least: 4.0
 Tested up to: 4.6
-Stable tag: 2.5
+Stable tag: 3.0
 License: GPLv2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -41,6 +41,12 @@ Yes, probably.
 Yes.
 
 == Changelog ==
+
+= 2.7 =
+* Forgot to update versions everywhere
+
+= 2.6 =
+* Logging in now updates name and email if they don't match.
 
 = 2.5 =
 * Autoclicking dataporten-login button when default form is hidden.
